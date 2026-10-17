@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 
 import com.android.app.viewcapture.ViewCaptureFactory;
 import com.android.launcher3.AbstractFloatingView;
+import com.android.launcher3.taskbar.allapps.TaskbarAllAppsContainerView;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.TouchController;
@@ -103,9 +104,11 @@ public class TaskbarOverlayDragLayer extends
             return false;
         }
 
-        // Reset the search and go back to the All Apps grid.
-        if (!mContainer.getAppsView().getSearchUiManager().isSearchQueryEmpty()) {
-            mContainer.getAppsView().getSearchUiManager().resetSearch();
+        // Reset the search and go back to the All Apps grid. The overlay also hosts views other than
+        // All Apps, and then there is no apps view.
+        TaskbarAllAppsContainerView appsView = mContainer.getAppsView();
+        if (appsView != null && !appsView.getSearchUiManager().isSearchQueryEmpty()) {
+            appsView.getSearchUiManager().resetSearch();
             return true;
         }
 
