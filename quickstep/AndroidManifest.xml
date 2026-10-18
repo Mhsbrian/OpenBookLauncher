@@ -59,6 +59,9 @@
     -->
     <uses-permission android:name="android.permission.ACCESS_HIDDEN_PROFILES_FULL" />
 
+    <!-- Start contextual search: the pointer shake, Meta+A and Meta+G (OPENBOOK). -->
+    <uses-permission android:name="android.permission.ACCESS_CONTEXTUAL_SEARCH" />
+
     <!-- Permission required to listen to recent, all app key gestures. -->
     <uses-permission android:name="android.permission.MANAGE_KEY_GESTURES"
         android:featureFlag="com.android.window.flags.grant_manage_key_gestures_to_recents" />
