@@ -78,7 +78,9 @@ public class AddWorkspaceItemsTask implements ModelUpdateTask {
         }
 
         final ArrayList<ItemInfo> addedItemsFinal = new ArrayList<>();
-        final IntSet excludedScreens = IntSet.wrap(FIRST_SCREEN_ID);
+        // OPENBOOK: the first page holds no search bar on OpenBook's desktop, and it is the page the launcher shows by
+        // default. Skipping it put every installed app's icon on the second page, where the person never saw it.
+        final IntSet excludedScreens = new IntSet();
         final Context context = taskController.getContext();
 
         synchronized (dataModel) {
