@@ -21,7 +21,7 @@ Legend: **code** = new code in this fork; **flag** = AOSP 17 already has the cod
 |---|---|---|---|
 | 1 | **Click to minimize:** clicking the taskbar icon of the focused window minimizes it; clicking again restores it | code | WM Shell already has `IDesktopMode.minimizeDesktopApp`; the taskbar tap handler only restores today |
 | 2 | **Meta+1…9** opens or focuses the Nth taskbar app | code | Not in AOSP 17 Launcher3 |
-| 3 | **Drag a pinned app off the taskbar** to unpin it | flag | `enable_taskbar_drag_to_remove` |
+| 3 | **Drag a pinned app off the taskbar** to unpin it | flag + code | `enable_taskbar_drag_to_remove` (OpenBook's value set), plus a quickstep fix: on the home screen a mouse drag up off the taskbar was taken as swipe-up-to-home |
 | 4 | **Middle-click** a taskbar icon to open a new window of that app | code | For apps that support multiple instances |
 | 5 | **New apps stay off the desktop** (setting, default off on desktop) | code | AOSP hard-codes `addIconToHome = true`. OpenBook's commit "new app icons go on the first desktop page" (Quire) stays for apps Quire builds |
 | 6 | **Two-line app names** in All Apps | flag | `enable_twoline_allapps` |

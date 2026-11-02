@@ -593,9 +593,13 @@ object InputConsumerUtils {
                 reasonString.append("%srunning task == null", SUBSTRING_PREFIX),
             )
         } else if (
-            previousGestureAnimatedToLauncher ||
+            (previousGestureAnimatedToLauncher ||
                 launcherResumedThroughShellTransition ||
-                forceLauncherInputConsumer
+                forceLauncherInputConsumer) &&
+                // OPENBOOK: on the desktop a mouse never drives a launcher gesture: it falls through to the default
+                // consumer below, as it does over apps. Otherwise a mouse drag up off the taskbar on the home screen
+                // can be taken as swipe-up-to-home, which cancels the taskbar's own drag (drag to unpin, ANAL-359).
+                !ignoreNonTrackpadMouseEvent(context, gestureState, event)
         ) {
             createLauncherInputConsumer<S, T>(
                 userUnlocked,
