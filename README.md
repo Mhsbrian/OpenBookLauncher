@@ -36,6 +36,10 @@ A change reaches OpenBook in two steps:
 - One feature or one fix per pull request, with the [Conventional Commits](https://www.conventionalcommits.org/)
   title, as in OpenBook (`CONTRIBUTING.md` there).
 - Test results, screenshots and logs go on the Multica issue, not in this repository.
+- A pull request merges, squashed, when CI is green and OpenBook's Checker says Proceed. CI
+  (`openbook/ci/check.py`) checks what OpenBook changed above `aosp/android17-release`: commit identities, hygiene
+  (no logs, images outside `res*/`, keys, home-network addresses or big files), whitespace and XML. Launcher3 only
+  builds inside an AOSP tree, so the build check is the author's lane build in OpenBook, written in the pull request.
 - Nothing from Google's proprietary images, apps or design assets. Googlebook is a reference for behaviour, not a
   source of code or art.
 
