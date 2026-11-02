@@ -207,6 +207,10 @@
     <!-- Used to differentiate between desktop and non-desktop devices. -->
     <bool name="desktop_form_factor">false</bool>
 
+    <!-- OpenBook: whether apps the person installs get an icon on the home screen until they choose in Settings
+         (pref_add_icon_to_home). Their choice always wins. A desktop overlay sets it to false. -->
+    <bool name="pref_add_icon_to_home_default">true</bool>
+
     <string-array name="grid_control_known_signers" translatable="false" />
 
     <string-array name="supported_overlay_apps" translatable="false"/>

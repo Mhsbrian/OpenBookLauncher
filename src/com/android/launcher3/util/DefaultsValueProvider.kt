@@ -17,6 +17,8 @@
 package com.android.launcher3.util
 
 import android.content.Context
+import com.android.launcher3.R
+import com.android.launcher3.dagger.ApplicationContext
 import com.android.launcher3.dagger.LauncherAppSingleton
 import com.android.launcher3.dagger.LauncherComponentProvider.appComponent
 import javax.inject.Inject
@@ -42,8 +44,12 @@ interface DefaultsValueProvider {
 
 /** Default implementation of {@link DefaultsValueProvider}. */
 @LauncherAppSingleton
-class BaseDefaultsValueProvider @Inject constructor() : DefaultsValueProvider {
+class BaseDefaultsValueProvider
+@Inject
+constructor(@ApplicationContext private val context: Context) : DefaultsValueProvider {
     override val enableTwoLineToggle: Boolean = false
 
-    override val addIconToHome: Boolean = true
+    // OpenBook: a resource, so a desktop overlay can turn it off (openbook/ROADMAP.md, M1 #5).
+    override val addIconToHome: Boolean
+        get() = context.resources.getBoolean(R.bool.pref_add_icon_to_home_default)
 }
