@@ -136,6 +136,7 @@ import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ResolvedTargetInfo;
 import com.android.launcher3.model.data.TaskItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.openbook.TaskbarClickToMinimize;
 import com.android.launcher3.popup.PopupContainer;
 import com.android.launcher3.statehandlers.DesktopVisibilityController;
 import com.android.launcher3.taskbar.TaskbarAutohideSuspendController.AutohideSuspendFlag;
@@ -305,6 +306,7 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
     private final int mPrimaryDisplayId;
     private final SystemUiProxy mSysUiProxy;
     private final ActivityManagerWrapper mActivityManagerWrapper;
+    private final TaskbarClickToMinimize mClickToMinimize;
     private final DesktopState mDesktopState;
     private final Context mWindowContext;
     private final Set<InputConsumer> mInputConsumerCleanUpSet =
@@ -475,6 +477,7 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
                 new NudgeViewController(this, nudgeView),
                 new TaskbarHandoffController(this),
                 new TaskbarViewDragDropController(this, taskbarView));
+        mClickToMinimize = new TaskbarClickToMinimize(this, mControllers, mActivityManagerWrapper);
 
         mLauncherPrefs = LauncherPrefs.get(this);
         onViewCreated();
@@ -1789,6 +1792,15 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
     }
 
     protected void onTaskbarIconClicked(View view) {
+        // OpenBook: clicking the front window's icon minimizes it (openbook/ROADMAP.md, M1 #1).
+        if (mClickToMinimize.handleClick(view, mControllers.uiController.isInOverviewUi(),
+                () -> onTaskbarIconClickedAosp(view))) {
+            return;
+        }
+        onTaskbarIconClickedAosp(view);
+    }
+
+    private void onTaskbarIconClickedAosp(View view) {
         TaskbarUIController taskbarUIController = mControllers.uiController;
         RecentsViewInteractor recents = taskbarUIController.getRecentsViewInteractor();
         boolean shouldCloseAllOpenViews = true;
