@@ -1216,6 +1216,12 @@ constructor(
             desktopMode?.showDesktopApp(taskId, transition, toFrontReason)
         }
 
+    /** Minimize the desktop task with the given id (OpenBook: taskbar click to minimize). */
+    fun minimizeDesktopApp(taskId: Int) =
+        executeWithErrorLog({ "Failed call minimizeDesktopApp" }) {
+            desktopMode?.minimizeDesktopApp(taskId)
+        }
+
     /** Call shell to move to an existing fullscreen task (given by [taskId]) from desktop. */
     @JvmOverloads
     fun moveToFullscreen(
