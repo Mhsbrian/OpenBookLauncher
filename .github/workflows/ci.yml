@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: OpenBook checks
+    runs-on: ubuntu-24.04
+    steps:
+      # Full history without blobs: the checks need the upstream branch and OpenBook's commits above it, and fetch
+      # only the blobs of the files OpenBook changed.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          filter: blob:none
+      - run: python3 openbook/ci/check.py --upstream origin/aosp/android17-release
