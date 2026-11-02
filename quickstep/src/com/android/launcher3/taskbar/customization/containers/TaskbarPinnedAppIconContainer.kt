@@ -262,6 +262,8 @@ class TaskbarPinnedAppIconContainer(context: Context) :
         if (enableCursorDrivenWorkflows()) {
             (icon as? CustomTouchDelegate)?.customActionsListener =
                 taskbarViewCallbacks.iconCustomActionsListener
+            // OpenBook: middle-click opens a new window (openbook/ROADMAP.md, M1 #4).
+            icon.setOnTouchListener(activityContext.taskbarIconMiddleClickListener)
         } else {
             // Add right-click support to btv icons.
             icon.setOnTouchListener { v, event ->

@@ -137,6 +137,7 @@ import com.android.launcher3.model.data.ResolvedTargetInfo;
 import com.android.launcher3.model.data.TaskItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
 import com.android.launcher3.openbook.TaskbarClickToMinimize;
+import com.android.launcher3.openbook.TaskbarMiddleClick;
 import com.android.launcher3.popup.PopupContainer;
 import com.android.launcher3.statehandlers.DesktopVisibilityController;
 import com.android.launcher3.taskbar.TaskbarAutohideSuspendController.AutohideSuspendFlag;
@@ -307,6 +308,8 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
     private final SystemUiProxy mSysUiProxy;
     private final ActivityManagerWrapper mActivityManagerWrapper;
     private final TaskbarClickToMinimize mClickToMinimize;
+    private final TaskbarMiddleClick mMiddleClick = new TaskbarMiddleClick(this,
+            () -> getControllers().uiController.isInOverviewUi(), this::onTaskbarIconClickedAosp);
     private final DesktopState mDesktopState;
     private final Context mWindowContext;
     private final Set<InputConsumer> mInputConsumerCleanUpSet =
@@ -1798,6 +1801,11 @@ public class TaskbarActivityContext extends BaseTaskbarContext {
             return;
         }
         onTaskbarIconClickedAosp(view);
+    }
+
+    /** OpenBook: a taskbar icon's middle-click handling (openbook/ROADMAP.md, M1 #4). */
+    public View.OnTouchListener getTaskbarIconMiddleClickListener() {
+        return mMiddleClick;
     }
 
     private void onTaskbarIconClickedAosp(View view) {

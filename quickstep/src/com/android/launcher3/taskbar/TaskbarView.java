@@ -1384,6 +1384,8 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
                 customTouchDelegate.setCustomActionsListener(
                         mControllerCallbacks.getIconCustomActionsListener());
             }
+            // OpenBook: middle-click opens a new window (openbook/ROADMAP.md, M1 #4).
+            icon.setOnTouchListener(mActivityContext.getTaskbarIconMiddleClickListener());
         } else {
             // Add right-click support to btv icons.
             icon.setOnTouchListener((v, event) -> {

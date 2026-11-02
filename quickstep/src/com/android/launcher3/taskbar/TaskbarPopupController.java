@@ -479,7 +479,7 @@ public class TaskbarPopupController implements TaskbarControllers.LoggableTaskba
      * supports multi-instance.
      * @return A factory function to be used in populating the long-press menu.
      */
-    SystemShortcut.Factory<BaseTaskbarContext> createNewWindowShortcutFactory() {
+    public SystemShortcut.Factory<BaseTaskbarContext> createNewWindowShortcutFactory() {
         return (context, itemInfo, originalView) -> {
             if (shouldShowMultiInstanceOptions(itemInfo)) {
                 return new NewWindowTaskbarShortcut<>(context, itemInfo, originalView);

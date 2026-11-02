@@ -116,6 +116,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         if (enableCursorDrivenWorkflows()) {
             (icon as? CustomTouchDelegate)?.customActionsListener =
                 viewCallbacks.iconCustomActionsListener
+            // OpenBook: middle-click opens a new window (openbook/ROADMAP.md, M1 #4).
+            icon.setOnTouchListener(mActivityContext.taskbarIconMiddleClickListener)
         }
 
         icon.layoutParams =
