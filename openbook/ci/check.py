@@ -56,10 +56,11 @@ def identity(root, upstream):
     out = git(root, "log", "--no-merges", "-z", "--format=%h%x1f%an%x1f%ae%x1f%cn%x1f%ce", f"{upstream}..HEAD")
     for rec in filter(None, out.stdout.decode().split("\0")):
         sha, an, ae, cn, ce = rec.strip("\n").split("\x1f")
+        # The rejected name and address are not printed: CI logs must not copy them either.
         if not own(an, ae) and not THIRD_PARTY_AUTHOR.search(ae):
-            yield f"commit {sha}", f"author '{an} <{ae}>' is not an allowed identity"
+            yield f"commit {sha}", "the author is not an allowed identity (git log -1 --format='%an <%ae>' to see it)"
         if not own(cn, ce) and (cn, ce) != GITHUB:
-            yield f"commit {sha}", f"committer '{cn} <{ce}>' is not an allowed identity"
+            yield f"commit {sha}", "the committer is not an allowed identity (git log -1 --format='%cn <%ce>')"
 
 
 def changed(root, upstream):
@@ -89,8 +90,9 @@ def hygiene(root, names):
             yield name, "contains a private key"
         if b"\0" not in head[:8192]:
             match = HOME_LAN_IPV4.search(head)
-            if match:
-                yield name, f"contains a home-network address ({match.group().decode()}); use 192.0.2.x in examples"
+            if match:  # the line, not the address, so the CI log doesn't copy it
+                line = head.count(b"\n", 0, match.start()) + 1
+                yield f"{name}:{line}", "contains a home-network address; use 192.0.2.x in examples"
 
 
 def whitespace(root, upstream):
