@@ -75,6 +75,7 @@ import com.android.launcher3.R;
 import com.android.launcher3.anim.AnimatorListeners;
 import com.android.launcher3.concurrent.annotations.TaskbarUi;
 import com.android.launcher3.dagger.ApplicationContext;
+import com.android.launcher3.openbook.TaskbarAppShortcuts;
 import com.android.launcher3.statehandlers.DesktopVisibilityController;
 import com.android.launcher3.statehandlers.DesktopVisibilityController.DesktopVisibilityListener;
 import com.android.launcher3.statemanager.StatefulActivity;
@@ -352,6 +353,11 @@ public class TaskbarManagerImpl {
                 i -> destroyAllTaskbars());
         shutdownReceiver.register(actionsFilter(Intent.ACTION_SHUTDOWN));
         cleanupTasks.addCloseable(getTaskbarUiThread(), shutdownReceiver);
+
+        // OpenBook: Meta+1…9 open or focus the Nth taskbar app (openbook/ROADMAP.md, M1 #2).
+        cleanupTasks.addCloseable(getTaskbarUiThread(), new TaskbarAppShortcuts(mBaseContext,
+                getTaskbarUiThread(),
+                () -> mDeviceUnlocked ? getTaskbarForDisplay(getFocusedDisplayId()) : null));
 
         if (enableGrowthNudge()) {
             // TODO: b/397739323 - Add permission to limit access to Growth Framework.
