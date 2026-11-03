@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,6 +68,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -106,6 +108,7 @@ fun OpenBookMenuContent(
     onShown: () -> Unit,
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val density = LocalDensity.current
     val t = remember(context) { UiTokens(context, density.density, density.fontScale, spec.byTouch) }
 
@@ -234,7 +237,13 @@ fun OpenBookMenuContent(
         if (signal > 0) {
             val first = requesters.firstOrNull()
             first?.requestFocus()
-            android.util.Log.d(OpenBookMenu.TAG, "keyboard: first row focus requested ${first != null}")
+            withFrameNanos {}
+            android.util.Log.d(
+                OpenBookMenu.TAG,
+                "keyboard: first row focus requested ${first != null}, row $focusedIndex focused, view focus " +
+                    "${view.hasFocus()} (window focus ${view.hasWindowFocus()}, touch mode ${view.isInTouchMode}, " +
+                    "focused ${view.rootView.findFocus()?.javaClass?.simpleName})",
+            )
         }
     }
 
