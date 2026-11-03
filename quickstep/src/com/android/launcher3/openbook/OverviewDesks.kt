@@ -223,6 +223,8 @@ object OverviewDesks {
         private var loading = false
         private var unavailable = false
         private var listening = false
+        /** Counts wallpaper changes, so a decode that started before one doesn't count as current. */
+        private var generation = 0
         private val drawables = ArrayList<WeakReference<Drawable>>()
 
         fun track(d: Drawable) {
@@ -244,6 +246,7 @@ object OverviewDesks {
                 { _, which ->
                     if (which and WallpaperManager.FLAG_SYSTEM != 0) {
                         Log.d(TAG, "desk wallpaper: the wallpaper changed")
+                        generation++
                         stale = true
                         unavailable = false
                         invalidateAll()
@@ -258,6 +261,7 @@ object OverviewDesks {
             val display = context.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
             val aspect = if (display.isEmpty) 1.6f else display.width().toFloat() / display.height()
             val app = context.applicationContext
+            val gen = generation
             THREAD_POOL_EXECUTOR.execute {
                 val result = try {
                     decode(app, width, aspect)
@@ -267,9 +271,15 @@ object OverviewDesks {
                 }
                 MAIN_EXECUTOR.execute {
                     loading = false
-                    stale = false
+                    // A change during the decode: this result may be the old wallpaper, so decode again.
+                    stale = gen != generation
                     if (result == null) {
-                        unavailable = true
+                        // A live wallpaper (or none readable): drop the last picture, so tiles show the flat colour
+                        // rather than a wallpaper that is gone.
+                        if (bitmap != null) Log.d(TAG, "desk wallpaper: dropped the last picture")
+                        bitmap = null
+                        decodedFor = 0
+                        unavailable = !stale
                     } else {
                         bitmap = result
                         decodedFor = width
