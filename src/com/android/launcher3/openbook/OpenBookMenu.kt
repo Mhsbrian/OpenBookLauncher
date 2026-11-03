@@ -12,12 +12,10 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.StateListDrawable
 import android.provider.Settings
 import android.util.Log
@@ -510,13 +508,19 @@ object OpenBookMenu {
         for (i in 0 until group.childCount) {
             val child = group.getChildAt(i)
             if (child is DeepShortcutView) {
-                child.background = rowBackground(t)
+                // The row itself draws nothing (DeepShortcutView reads a GradientDrawable or AOSP's blur layers as its
+                // background); its clickable text view, which gets hover and press, carries the state layer.
+                child.background = null
+                child.elevation = 0f
+                child.minimumHeight = t.row
                 child.layoutParams?.let {
                     it.height = t.row
                     (it as? ViewGroup.MarginLayoutParams)?.bottomMargin = 0
                     child.layoutParams = it
                 }
                 child.bubbleText?.let { text ->
+                    text.background = rowBackground(t)
+                    text.minHeight = t.row
                     text.setTextSize(TypedValue.COMPLEX_UNIT_PX, t.text)
                     text.typeface = t.typeface
                     text.setTextColor(t.onSurface)
@@ -531,6 +535,7 @@ object OpenBookMenu {
                 }
             } else if (child is ViewGroup) {
                 child.background = null
+                child.elevation = 0f
                 styleViewRows(child, t)
             }
         }
@@ -543,7 +548,7 @@ object OpenBookMenu {
             setColor(ColorUtils.setAlphaComponent(t.onSurface, (255 * alpha).roundToInt()))
             if (ring) setStroke(t.ring, t.primary)
         }
-        val states = StateListDrawable().apply {
+        return StateListDrawable().apply {
             addState(intArrayOf(android.R.attr.state_pressed), layer(0.12f, false))
             addState(intArrayOf(android.R.attr.state_focused), layer(0f, true))
             addState(intArrayOf(android.R.attr.state_hovered), layer(0.08f, false))
@@ -551,7 +556,6 @@ object OpenBookMenu {
             setEnterFadeDuration(t.hoverInMs)
             setExitFadeDuration(t.hoverOutMs)
         }
-        return RippleDrawable(ColorStateList.valueOf(Color.TRANSPARENT), states, null)
     }
 
     /** The menu's tokens (res/values/openbook_tokens.xml) and the Material roles it uses. */
