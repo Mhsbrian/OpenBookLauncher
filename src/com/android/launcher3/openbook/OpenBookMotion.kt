@@ -22,6 +22,11 @@ import androidx.dynamicanimation.animation.SpringForce
 import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
 import com.android.app.animation.Interpolators.STANDARD
 import com.android.launcher3.anim.SpringAnimationBuilder
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
  * OpenBook's one motion system (openbook/ROADMAP.md M2 #12; OpenBook's docs/launcher-design.md §7): three springs and
@@ -67,13 +72,31 @@ object OpenBookMotion {
                 },
             )
 
-        /** How long this spring takes from [from] to rest at [to], within [minVisibleChange], ms. */
+        /**
+         * How long this spring, let go at rest at [from], takes to come to rest at [to] as a `SpringAnimation` judges
+         * it: within 0.75 × [minVisibleChange] of [to] and slower than 62.5 times that per second (`SpringForce`'s
+         * thresholds). `spring.panel` from 0 to 1 at the scale threshold: 275 ms. Underdamped springs only, as all
+         * three tokens are.
+         */
         fun settleMs(
-            context: Context,
             from: Float = 0f,
             to: Float = 1f,
             minVisibleChange: Float = SpringAnimation.MIN_VISIBLE_CHANGE_SCALE,
-        ): Long = builder(context, from, to, minVisibleChange).computeParams().duration
+        ): Long {
+            val threshold = minVisibleChange * 0.75
+            val sigma = damping * sqrt(stiffness.toDouble())
+            val omega = sqrt(stiffness.toDouble()) * sqrt(1.0 - damping * damping)
+            val a = (from - to).toDouble()
+            val b = sigma * a / omega
+            for (ms in 0..MAX_SETTLE_MS) {
+                val t = ms / 1000.0
+                val e = exp(-sigma * t)
+                val x = e * (a * cos(omega * t) + b * sin(omega * t))
+                val v = -e * (sigma * b + omega * a) * sin(omega * t)
+                if (abs(x) < threshold && abs(v) < threshold * 62.5) return ms.toLong()
+            }
+            return MAX_SETTLE_MS.toLong()
+        }
 
         private fun builder(context: Context, from: Float, to: Float, minVisibleChange: Float) =
             SpringAnimationBuilder(context)
@@ -84,6 +107,10 @@ object OpenBookMotion {
                 .setEndValue(to)
 
         override fun toString() = "$name ($stiffness, $damping)"
+
+        private companion object {
+            const val MAX_SETTLE_MS = 5000
+        }
     }
 
     /** A duration token: a time and a curve. */

@@ -452,14 +452,15 @@ class AllAppsPanel private constructor(
 
         /**
          * How long the launcher's ALL_APPS state takes to arrive ([opening]) or leave on a desk, where it opens the
-         * taskbar's All Apps (`all_apps_surface`), which is the panel: as long as the panel's own motion, the settling
-         * time of `spring.panel` opening and `duration.exit` closing (design §7), in place of AOSP's 500 ms and 100 ms.
+         * taskbar's All Apps (`all_apps_surface`), which is the panel: as long as the panel's own motion, `spring.panel`'s
+         * settling time opening (275 ms) and `duration.exit` closing (150 ms; design §7), in place of AOSP's 500 ms and
+         * 100 ms.
          * Null elsewhere (AOSP's durations).
          */
         @JvmStatic
         fun stateTransitionMs(context: Context, opening: Boolean): Int? {
             if (!Flags.allAppsSurface() || !context.resources.getBoolean(R.bool.desktop_form_factor)) return null
-            return if (opening) OpenBookMotion.PANEL.settleMs(context).toInt() else OpenBookMotion.EXIT.ms.toInt()
+            return if (opening) OpenBookMotion.PANEL.settleMs().toInt() else OpenBookMotion.EXIT.ms.toInt()
         }
 
         /** Whether [context]'s All Apps is the panel: the persistent taskbar of a desktop form factor, primary display. */
