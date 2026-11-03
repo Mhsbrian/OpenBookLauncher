@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright (C) 2026 The OpenBook Authors
+  SPDX-License-Identifier: Apache-2.0
+
+  OpenBook Launcher design tokens (openbook/ROADMAP.md M2). Names and values follow OpenBook's
+  docs/launcher-design.md: §2 (taskbar), §6 (tokens), §7 (motion). Colours are not here: they are Material roles read
+  from the theme (@color/materialColor*), so they follow the wallpaper.
+-->
+<resources>
+    <!-- §2.1 Taskbar geometry. The bar itself stays AOSP's 56 dp (taskbar_size), so window insets don't move. -->
+    <dimen name="ob_tb_gap">4dp</dimen>
+    <dimen name="ob_tb_radius">14dp</dimen>
+    <!-- The row sits this far above the bar's centre, so each state line lies on the bar under its target. -->
+    <dimen name="ob_tb_row_lift">2dp</dimen>
+    <dimen name="ob_tb_pill_width">56dp</dimen>
+    <dimen name="ob_tb_pill_height">40dp</dimen>
+    <dimen name="ob_tb_glyph">20dp</dimen>
+    <dimen name="ob_tb_divider_width">1dp</dimen>
+    <dimen name="ob_tb_divider_height">24dp</dimen>
+    <dimen name="ob_tb_divider_margin">8dp</dimen>
+    <item name="ob_tb_divider_alpha" format="float" type="dimen">0.70</item>
+
+    <!-- §2.3 One line of state, 1 dp under the 48 dp target. -->
+    <dimen name="ob_ind_offset">1dp</dimen>
+    <dimen name="ob_ind_height">3dp</dimen>
+    <dimen name="ob_ind_run">6dp</dimen>
+    <dimen name="ob_ind_front">16dp</dimen>
+    <dimen name="ob_ind_min">8dp</dimen>
+    <dimen name="ob_ind_stroke">1dp</dimen>
+    <dimen name="ob_ind_dot">3dp</dimen>
+    <dimen name="ob_ind_dot_gap">3dp</dimen>
+
+    <!-- §2.4, §6.2 State layers (onSurface) and the focus ring. -->
+    <item name="ob_state_hover" format="float" type="dimen">0.08</item>
+    <item name="ob_state_front" format="float" type="dimen">0.06</item>
+    <item name="ob_state_front_hover" format="float" type="dimen">0.12</item>
+    <item name="ob_state_pressed" format="float" type="dimen">0.12</item>
+    <item name="ob_press_scale" format="float" type="dimen">0.92</item>
+    <dimen name="ob_focus_ring">2dp</dimen>
+    <dimen name="ob_focus_ring_offset">2dp</dimen>
+
+    <!-- §2.4 Tooltip. -->
+    <dimen name="ob_tip_height">28dp</dimen>
+    <dimen name="ob_tip_padding_h">12dp</dimen>
+    <dimen name="ob_tip_gap">8dp</dimen>
+    <integer name="ob_tip_delay_ms">500</integer>
+
+    <!-- §6.3 Glass. -->
+    <dimen name="ob_glass_blur">34dp</dimen>
+    <dimen name="ob_glass_edge">1dp</dimen>
+    <item name="ob_glass_alpha" format="float" type="dimen">0.80</item>
+    <!-- Blur off (battery saver, thermal, Developer options) or unavailable: the same layout, tint only. -->
+    <item name="ob_glass_solid_alpha" format="float" type="dimen">0.96</item>
+
+    <!-- §7 Motion. Springs: stiffness, damping ratio. Durations in ms. -->
+    <item name="ob_spring_settle_stiffness" format="float" type="dimen">700</item>
+    <item name="ob_spring_settle_damping" format="float" type="dimen">0.90</item>
+    <item name="ob_spring_tick_stiffness" format="float" type="dimen">1400</item>
+    <item name="ob_spring_tick_damping" format="float" type="dimen">0.70</item>
+    <integer name="ob_duration_fade_ms">120</integer>
+    <integer name="ob_duration_hover_in_ms">100</integer>
+    <integer name="ob_duration_hover_out_ms">150</integer>
+
+    <item type="id" name="openbook_taskbar_icon_state" />
+</resources>

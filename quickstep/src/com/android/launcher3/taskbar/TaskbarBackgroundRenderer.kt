@@ -29,6 +29,7 @@ import com.android.launcher3.Utilities
 import com.android.launcher3.Utilities.mapRange
 import com.android.launcher3.Utilities.mapToRange
 import com.android.launcher3.icons.GraphicsUtils.setColorAlphaBound
+import com.android.launcher3.openbook.TaskbarGlass
 import com.android.launcher3.taskbar.TaskbarPinningController.Companion.PINNING_PERSISTENT
 import com.android.launcher3.taskbar.TaskbarPinningController.Companion.PINNING_TRANSIENT
 import com.android.launcher3.taskbar.Utilities.getShapedTaskbarRadius
@@ -53,6 +54,8 @@ class TaskbarBackgroundRenderer(private val context: TaskbarActivityContext) {
     var isAnimatingTransientTaskbar = false
 
     val paint = Paint()
+    /** OpenBook: draws the persistent background as glass (openbook/TaskbarGlass); null for AOSP's. */
+    var glass: TaskbarGlass? = null
     private val strokePaint = Paint()
     val lastDrawnTransientRect = RectF()
     var backgroundHeight = context.deviceProfile.taskbarProfile.height.toFloat()
@@ -156,6 +159,15 @@ class TaskbarBackgroundRenderer(private val context: TaskbarActivityContext) {
     }
 
     private fun drawPersistentBackground(canvas: Canvas) {
+        glass?.let { // OpenBook: a glass bar, full width, without the inverted corners
+            val height =
+                if (isAnimatingPinning || isAnimatingPersistentTaskbar) {
+                    maxPersistentTaskbarHeight * backgroundProgress
+                } else {
+                    min(maxPersistentTaskbarHeight, backgroundHeight)
+                }
+            return it.draw(canvas, canvas.height - height, height, paint.alpha)
+        }
         if (isAnimatingPinning || isAnimatingPersistentTaskbar) {
             val persistentTaskbarHeight = maxPersistentTaskbarHeight * backgroundProgress
             canvas.translate(0f, canvas.height - persistentTaskbarHeight)

@@ -99,6 +99,7 @@ import com.android.launcher3.model.data.AppInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.openbook.TaskbarIconDecor;
 import com.android.launcher3.openbook.TwoLineLabels;
 import com.android.launcher3.popup.IconViewController;
 import com.android.launcher3.popup.Poppable;
@@ -216,6 +217,8 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     private final Paint mRunningAppIndicatorPaint;
     private final Rect mRunningAppIconBounds = new Rect();
     private RunningAppState mRunningAppState;
+    // OpenBook: the taskbar's own state drawing (openbook/TaskbarIconDecor), set on its targets only.
+    @Nullable private TaskbarIconDecor mTaskbarIconDecor;
 
     @ViewDebug.ExportedProperty(category = "launcher")
     private int mLineIndicatorColor;
@@ -554,6 +557,17 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
         return mRunningAppState;
     }
 
+    /** OpenBook: draws this taskbar target's state instead of AOSP's running-app line (null: AOSP's). */
+    public void setTaskbarIconDecor(@Nullable TaskbarIconDecor decor) {
+        mTaskbarIconDecor = decor;
+        invalidate();
+    }
+
+    @Nullable
+    public TaskbarIconDecor getTaskbarIconDecor() {
+        return mTaskbarIconDecor;
+    }
+
     public int getLineIndicatorColor() {
         return mLineIndicatorColor;
     }
@@ -808,6 +822,7 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (mTaskbarIconDecor != null) mTaskbarIconDecor.onTouchEvent(this, event); // OpenBook
         return onDelegateTouchEvent(event);
     }
 
@@ -929,10 +944,43 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
     @Override
     public void onDraw(Canvas canvas) {
         drawSelectedBackgroundIfNecessary(canvas);
+        if (mTaskbarIconDecor != null) { // OpenBook
+            drawWithTaskbarIconDecor(mTaskbarIconDecor, canvas);
+            return;
+        }
 
         super.onDraw(canvas);
         drawDotIfNecessary(canvas);
         drawRunningAppIndicatorIfNecessary(canvas);
+    }
+
+    /** OpenBook: {@link #onDraw} with the decor's state layer, press scale, state line and focus ring. */
+    private void drawWithTaskbarIconDecor(TaskbarIconDecor decor, Canvas canvas) {
+        // The decor draws in view coordinates; the canvas is offset by the TextView's scroll.
+        final int scrollX = getScrollX();
+        final int scrollY = getScrollY();
+        canvas.translate(scrollX, scrollY);
+        decor.drawBehind(this, canvas);
+        canvas.translate(-scrollX, -scrollY);
+        float scale = decor.iconScale(this);
+        int count = canvas.save();
+        if (scale != 1f) {
+            getIconBounds(mRunningAppIconBounds);
+            canvas.scale(scale, scale, mRunningAppIconBounds.exactCenterX(),
+                    mRunningAppIconBounds.exactCenterY());
+        }
+        super.onDraw(canvas);
+        drawDotIfNecessary(canvas);
+        canvas.restoreToCount(count);
+        canvas.translate(scrollX, scrollY);
+        decor.drawOver(this, canvas);
+        canvas.translate(-scrollX, -scrollY);
+    }
+
+    @Override
+    protected void drawableStateChanged() {
+        super.drawableStateChanged();
+        if (mTaskbarIconDecor != null) mTaskbarIconDecor.onStateChanged(this); // OpenBook
     }
 
     protected void drawSelectedBackgroundIfNecessary(Canvas canvas) {

@@ -79,6 +79,7 @@ import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.TaskItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
 import com.android.launcher3.taskbar.TaskbarOverflowView.OverflowType;
+import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.taskbar.customization.TaskbarAllAppsButtonContainer;
 import com.android.launcher3.taskbar.customization.TaskbarDividerContainer;
 import com.android.launcher3.taskbar.customization.TaskbarSpecsEvaluator;
@@ -122,6 +123,9 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
     private final int mIconTouchSize;
     private final int mItemMarginLeftRight;
     private final int mItemPadding;
+    // OpenBook's taskbar (openbook/OpenBookTaskbar): 4 dp between targets, the row 2 dp above centre.
+    private final boolean mOpenBook;
+    private final int mOpenBookRowLift;
     private final int mFolderLeaveBehindColor;
     private final int[] mFirstIconViewLocation = new int[2];
     private final int[] mLastIconViewLocation = new int[2];
@@ -245,7 +249,11 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
         mIconTouchSize = dpToPx(specsEvaluator.getTaskbarIconTouchSize(), mActivityContext);
 
         // We layout the icons to be of mIconTouchSize in width and height
-        mItemMarginLeftRight = actualMargin - (mIconTouchSize - visualIconSize) / 2;
+        mOpenBook = OpenBookTaskbar.isEnabled(mActivityContext);
+        mOpenBookRowLift = mOpenBook ? resources.getDimensionPixelSize(R.dimen.ob_tb_row_lift) : 0;
+        mItemMarginLeftRight = mOpenBook
+                ? resources.getDimensionPixelSize(R.dimen.ob_tb_gap) / 2 // OpenBook
+                : actualMargin - (mIconTouchSize - visualIconSize) / 2;
 
         if (Flags.enableTaskbarIconContainer()) {
             mHotseatIconsContainer =
@@ -262,7 +270,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
 
         mAllAppsButtonContainer = (TaskbarAllAppsButtonContainer) inflate(
                 R.layout.taskbar_all_apps_button_container);
-        mAllAppsButtonTranslationOffset = (int) getResources().getDimension(
+        mAllAppsButtonTranslationOffset = mOpenBook ? 0 : (int) getResources().getDimension(
                 mAllAppsButtonContainer.getAllAppsButtonTranslationXOffset(
                         mActivityContext.isTransientTaskbar()));
 
@@ -1438,7 +1446,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        int spaceNeeded = getIconLayoutWidth();
+        int spaceNeeded = mOpenBook ? getOpenBookIconLayoutWidth() : getIconLayoutWidth();
         boolean layoutRtl = isLayoutRtl();
         DeviceProfile deviceProfile = mActivityContext.getDeviceProfile();
         int navSpaceNeeded = deviceProfile.getHotseatProfile().getBarEndOffset();
@@ -1497,7 +1505,7 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
 
         // Layout the children
         mIconLayoutBounds.right = iconEnd;
-        mIconLayoutBounds.top = (bottom - top - mIconTouchSize) / 2;
+        mIconLayoutBounds.top = (bottom - top - mIconTouchSize) / 2 - mOpenBookRowLift;
         mIconLayoutBounds.bottom = mIconLayoutBounds.top + mIconTouchSize;
 
         // With rtl layout, the all apps button will be translated by `allAppsButtonOffset` after
@@ -1647,6 +1655,30 @@ public class TaskbarView extends FrameLayout implements FolderIcon.FolderIconPar
         // count can be negative if views aren't added
         return Math.max(0, count);
     }
+    /**
+     * OpenBook: the width {@link #onLayout} lays the visible children out in, outer margins included. The apps pill and
+     * the divider aren't icon-sized, so AOSP's count of icons doesn't give it.
+     */
+    private int getOpenBookIconLayoutWidth() {
+        int width = 0;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child.getVisibility() == View.GONE || child == mQsb) {
+                continue;
+            }
+            if (child == mTaskbarDividerContainer) {
+                width += mTaskbarDividerContainer.getSpaceNeeded() - 2 * mItemMarginLeftRight;
+            } else if (child == mAllAppsButtonContainer) {
+                width += mAllAppsButtonContainer.getSpaceNeeded() + 2 * mItemMarginLeftRight;
+            } else if (child instanceof TaskbarPinnedAppIconContainer tic) {
+                width += tic.getSpaceNeeded() + 2 * mItemMarginLeftRight;
+            } else {
+                width += mIconTouchSize + 2 * mItemMarginLeftRight;
+            }
+        }
+        return width;
+    }
+
     /**
      * Returns the space used by the icons.
      */
