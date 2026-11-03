@@ -12,7 +12,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -105,7 +104,8 @@ object OpenBookMenu {
     /** In the middle of the drag layer (the menu key with nothing focused). */
     data object Centered : Anchor
 
-    class Header(val icon: Bitmap?, val title: CharSequence)
+    /** The taskbar menu's header: the app's icon as the taskbar draws it, and its name. */
+    class Header(val icon: Drawable?, val title: CharSequence)
 
     /** One of an app's windows: its title, whether it is the window in front, and what a click does. */
     class Window(val title: CharSequence, val front: Boolean, val onClick: () -> Unit)

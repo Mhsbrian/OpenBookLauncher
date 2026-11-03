@@ -4,14 +4,11 @@
  */
 package com.android.launcher3.openbook
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.util.Log
 import android.view.View
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.R
 import com.android.launcher3.model.data.ItemInfo
-import com.android.launcher3.model.data.ItemInfoWithIcon
 import com.android.launcher3.popup.ui.PopupItem
 import com.android.launcher3.taskbar.BaseTaskbarContext
 import com.android.launcher3.taskbar.TaskbarActivityContext
@@ -89,7 +86,7 @@ object TaskbarMenu {
                 )
             }
         }
-        val header = OpenBookMenu.Header(headerIcon(icon) ?: (item as? ItemInfoWithIcon)?.bitmap?.icon, appName)
+        val header = OpenBookMenu.Header(icon.icon?.constantState?.newDrawable(icon.resources)?.mutate(), appName)
         val windowCount = tasks.size
         return OpenBookMenu.Spec(
             kind = OpenBookMenu.Kind.TASKBAR,
@@ -128,17 +125,6 @@ object TaskbarMenu {
         val (close, rest) = shown.partition { it.labelResId == R.string.close_app_taskbar }
         val first = order.mapNotNull { id -> rest.firstOrNull { it.labelResId == id } }
         return listOf(first + rest.filter { it !in first }, close)
-    }
-
-    /** The icon as the taskbar draws it (its shape applied), at the header's 24 dp. */
-    private fun headerIcon(icon: BubbleTextView): Bitmap? {
-        val d = icon.icon?.constantState?.newDrawable(icon.resources)?.mutate() ?: return null
-        val size = icon.resources.getDimensionPixelSize(R.dimen.ob_mn_header_icon)
-        if (size <= 0) return null
-        val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        d.setBounds(0, 0, size, size)
-        d.draw(Canvas(b))
-        return b
     }
 
     private fun taskbarViewOf(view: View): View? {

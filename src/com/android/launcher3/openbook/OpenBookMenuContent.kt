@@ -52,6 +52,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -250,11 +252,17 @@ private fun Header(header: OpenBookMenu.Header, t: UiTokens) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val icon = header.icon
-        if (icon != null) {
-            Image(icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(t.headerIcon))
-        } else {
-            Spacer(Modifier.size(t.headerIcon))
-        }
+        // Drawn by the icon's own drawable on Compose's canvas: its shape, and hardware bitmaps, as on the taskbar.
+        Box(
+            Modifier.size(t.headerIcon).drawBehind {
+                if (icon != null) {
+                    drawIntoCanvas { c ->
+                        icon.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+                        icon.draw(c.nativeCanvas)
+                    }
+                }
+            }
+        )
         Spacer(Modifier.width(t.headerGap))
         Text(
             text = header.title.toString(),
