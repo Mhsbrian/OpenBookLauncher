@@ -25,6 +25,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.graphics.ColorUtils
 import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
 import com.android.app.animation.Interpolators.LINEAR
@@ -352,6 +353,7 @@ object OpenBookMenu {
 
         /** The menu closed: stop following its window. */
         fun detach() {
+            Log.d(TAG, "menu closed")
             dragLayer?.removeOnLayoutChangeListener(relayout)
             dragLayer = null
             pendingOpen = null
@@ -474,13 +476,15 @@ object OpenBookMenu {
             glass?.surfaceAlpha = a
         }
 
-        /** The menu was opened from the keyboard: its first row takes the focus (posted, after the caller's focus). */
-        fun focusFirstRow(content: View) {
-            if (!spec.byKeyboard) return
-            content.post {
-                val ok = content.requestFocus(View.FOCUS_DOWN)
-                Log.d(TAG, "keyboard: first row focused $ok")
-            }
+        /**
+         * Bumped when the menu, opened from the keyboard, is shown: [OpenBookMenuContent] then gives its first row the
+         * focus (a FocusRequester, after the caller's own `requestFocus` on the popup).
+         */
+        val focusSignal = mutableIntStateOf(0)
+
+        /** The menu is visible: a menu opened from the keyboard focuses its first row. */
+        fun focusFirstRow() {
+            if (spec.byKeyboard) focusSignal.intValue++
         }
     }
 

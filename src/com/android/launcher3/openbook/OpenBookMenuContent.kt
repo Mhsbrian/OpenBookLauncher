@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -87,12 +89,14 @@ import androidx.compose.ui.text.font.Typeface as ComposeTypeface
  *
  * In order: the taskbar menu's header and the app's windows, the app's shortcuts ([deepShortcuts]; null while they
  * load), then [items] grouped by the spec, with a divider between groups. [onShown] runs once, after the first
- * composition, so the popup can be measured and placed.
+ * composition, so the popup can be measured and placed. [focusSignal] rises when a menu opened from the keyboard is shown:
+ * its first row takes the focus.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OpenBookMenuContent(
     spec: OpenBookMenu.Spec,
+    focusSignal: State<Int>,
     items: List<PopupItem>,
     deepShortcuts: List<ItemInfoWithIcon?>,
     onItem: (PopupItem) -> Unit,
@@ -221,6 +225,16 @@ fun OpenBookMenuContent(
                     onClick = { onItem(item) },
                 )
             }
+        }
+    }
+
+    // Opened from the keyboard: the first row takes the focus once the menu is shown (design §4).
+    val signal = focusSignal.value
+    LaunchedEffect(signal) {
+        if (signal > 0) {
+            val first = requesters.firstOrNull()
+            first?.requestFocus()
+            android.util.Log.d(OpenBookMenu.TAG, "keyboard: first row focus requested ${first != null}")
         }
     }
 

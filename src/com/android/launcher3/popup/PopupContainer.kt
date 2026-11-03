@@ -95,7 +95,6 @@ open class PopupContainer<T : ActivityContext>(
     /** OpenBook's menu (openbook/OpenBookMenu): set before showing for OpenBook's look; null keeps AOSP's popup. */
     var openBookMenu: OpenBookMenu.Spec? = null
     private var openBookShown: OpenBookMenu.Menu? = null
-    private var openBookContent: View? = null
 
     /** Handles a deep shortcut click event. */
     private fun onDeepShortcutClick(item: WorkspaceItemInfo, iconBounds: Rect) {
@@ -212,6 +211,7 @@ open class PopupContainer<T : ActivityContext>(
                     if (openBook != null) {
                         OpenBookMenuContent(
                             spec = openBook.spec,
+                            focusSignal = openBook.focusSignal,
                             items = systemShortcuts,
                             deepShortcuts = viewModel.state.deepShortcuts,
                             onItem = { onClickListener(SystemShortcutClickEvent(it)) },
@@ -274,7 +274,6 @@ open class PopupContainer<T : ActivityContext>(
                 }
             }
 
-        openBookContent = composePopup
         addView(composePopup)
     }
 
@@ -313,7 +312,7 @@ open class PopupContainer<T : ActivityContext>(
             }
         )
         anim.start()
-        openBookContent?.let { menu.focusFirstRow(it) }
+        menu.focusFirstRow()
     }
 
     override fun animateClose() {
