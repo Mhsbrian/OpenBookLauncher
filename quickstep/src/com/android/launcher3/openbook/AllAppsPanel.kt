@@ -324,12 +324,8 @@ class AllAppsPanel private constructor(
         })
     }
 
-    /**
-     * The close began: it starts from wherever the opening got to. [swipeIdle] is whether AOSP's swipe detector was
-     * idle: otherwise AOSP would close on its scroll duration (300 ms) instead of ours, so the sheet resets it.
-     */
-    fun onCloseStart(swipeIdle: Boolean) {
-        if (!swipeIdle) Log.d(TAG, "close: the swipe detector wasn't idle")
+    /** The close began: it starts from wherever the opening got to. */
+    fun onCloseStart() {
         if (closing) return
         closing = true
         closeStart = SystemClock.uptimeMillis()

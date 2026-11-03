@@ -175,13 +175,15 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         }
         if (mIsOpen) {
             mAllAppsCallbacks.onAllAppsTransitionStart(false);
-            if (mPanel != null) { // OpenBook: the panel isn't swiped; it closes on its own exit, never a fling's
-                mPanel.onCloseStart(mSwipeDetector.isIdleState());
-                mSwipeDetector.finishedScrolling();
-            }
+            if (mPanel != null) mPanel.onCloseStart(); // OpenBook
         }
         handleClose(animate, mPanel != null
                 ? mPanel.getCloseDurationMs() : mAllAppsCallbacks.getCloseDuration());
+        if (mPanel != null && animate) {
+            // OpenBook: AbstractSlideInView starts the playback controller's player itself, which leaves it at
+            // ValueAnimator's default 300 ms whatever duration it was given; it hasn't drawn a frame yet.
+            mOpenCloseAnimation.getAnimationPlayer().setDuration(mPanel.getCloseDurationMs());
+        }
         mTaskbarUiState.setTaskbarAllAppsOpen(false);
     }
 
