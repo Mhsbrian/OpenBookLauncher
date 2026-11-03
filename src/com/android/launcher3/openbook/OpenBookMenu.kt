@@ -24,6 +24,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import androidx.core.graphics.ColorUtils
 import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
 import com.android.app.animation.Interpolators.LINEAR
@@ -362,7 +363,16 @@ object OpenBookMenu {
          */
         private fun place(): Boolean {
             val layer = dragLayer ?: return false
-            val insets = layer.insets
+            // The drag layer's insets, or the window's bars where larger: a desk's launcher window lays out under the
+            // taskbar (its drag layer's bottom inset is 0), and a menu must not slide under the bar.
+            val insets = Rect(layer.insets)
+            layer.rootWindowInsets?.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.tappableElement())
+                ?.let {
+                    insets.set(
+                        max(insets.left, it.left), max(insets.top, it.top),
+                        max(insets.right, it.right), max(insets.bottom, it.bottom),
+                    )
+                }
             popup.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
             val w = popup.measuredWidth
             val h = popup.measuredHeight
@@ -423,7 +433,7 @@ object OpenBookMenu {
             popup.translationX = 0f
             popup.translationY = 0f
             Log.d(TAG, "menu at [${x + o[0]},${y + o[1]}][${x + o[0] + w},${y + o[1] + h}] on screen, " +
-                "${w}x$h, in a ${layer.width}x${layer.height} window, ${spec.kind}")
+                "${w}x$h, in a ${layer.width}x${layer.height} window, insets $insets, ${spec.kind}")
             return true
         }
 
