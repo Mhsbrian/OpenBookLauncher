@@ -150,7 +150,7 @@
 
     <!-- §5.2 Overview for desks. The backdrop: the glass blur (ob_glass_blur) under `surface` at 18 % (light) or
          30 % (dark). Tiles: 20 dp corners for a desk, 16 dp for an app; a 1 dp lit outline (the glass outline) and a
-         soft shadow, 0 16 40 at 20 % black; hover lifts a tile 4 dp on spring.settle (OpenBookMotion) with a deeper shadow, 0 24 56 at
+         soft shadow, 0 16 40 at 20 % black; hover lifts a tile 4 dp on spring.settle with a deeper shadow, 0 24 56 at
          26 %; keyboard focus is a two-colour ring outside the edge, three 2 dp bands (surfaceContainerLowest,
          onPrimaryContainer, surfaceContainerLowest; WCAG technique C40). Clear all: a 40 dp glass chip, its bottom
          40 dp above the taskbar, an 18 dp glyph 8 dp before "Clear all" at 14/20 and weight 500, padding 14 and 18. -->
