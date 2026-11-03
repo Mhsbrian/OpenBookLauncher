@@ -41,6 +41,7 @@ import com.android.launcher3.allapps.ActivityAllAppsContainerView;
 import com.android.launcher3.allapps.AllAppsStore;
 import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
 import com.android.launcher3.allapps.SearchUiManager;
+import com.android.launcher3.openbook.AllAppsPanelCells;
 import com.android.launcher3.search.SearchCallback;
 import com.android.launcher3.views.ActivityContext;
 
@@ -112,6 +113,7 @@ public class AppsSearchContainerLayout extends ExtendedEditText
         int iconPadding = cellWidth - iconVisibleSize;
 
         int myWidth = rowWidth - iconPadding + getPaddingLeft() + getPaddingRight();
+        if (AllAppsPanelCells.isPanel(mLauncher)) myWidth = rowWidth; // OpenBook: the field spans the grid
         super.onMeasure(makeMeasureSpec(myWidth, EXACTLY), heightMeasureSpec);
     }
 

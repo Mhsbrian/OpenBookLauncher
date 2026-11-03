@@ -44,6 +44,7 @@ import com.android.launcher3.Insettable;
 import com.android.launcher3.R;
 import com.android.launcher3.anim.AnimatorListeners;
 import com.android.launcher3.anim.PendingAnimation;
+import com.android.launcher3.openbook.AllAppsPanel;
 import com.android.launcher3.taskbar.TaskbarUiState;
 import com.android.launcher3.taskbar.allapps.TaskbarAllAppsViewController.TaskbarAllAppsCallbacks;
 import com.android.launcher3.taskbar.overlay.TaskbarOverlayContext;
@@ -62,6 +63,8 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
     private final Consumer<Boolean> mWindowBlurListener = blursEnabled -> invalidate();
 
     private TaskbarAllAppsContainerView mAppsView;
+    // OpenBook: All Apps as a centred glass panel instead of this sheet (openbook/AllAppsPanel), or null.
+    private @Nullable AllAppsPanel mPanel;
     private float mShiftRange;
     private int mBlurRadius;
     private @Nullable Runnable mShowOnFullyAttachedToWindowRunnable;
@@ -127,6 +130,7 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         mAllAppsCallbacks.onAllAppsTransitionStart(true);
 
         boolean isAnimatingToAllApps = mAllAppsCallbacks.isStateTransitionToAllAppsInProgress();
+        if (mPanel != null) mPanel.onOpen(animate || isAnimatingToAllApps); // OpenBook
         if (animate || isAnimatingToAllApps) {
             // For any animation (potentially user-controlled), ensure the listeners are registered.
             setUpOpenAnimation(mAllAppsCallbacks.getOpenDuration());
@@ -170,8 +174,10 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         }
         if (mIsOpen) {
             mAllAppsCallbacks.onAllAppsTransitionStart(false);
+            if (mPanel != null) mPanel.onCloseStart(); // OpenBook
         }
-        handleClose(animate, mAllAppsCallbacks.getCloseDuration());
+        handleClose(animate, mPanel != null
+                ? mPanel.getCloseDurationMs() : mAllAppsCallbacks.getCloseDuration());
         mTaskbarUiState.setTaskbarAllAppsOpen(false);
     }
 
@@ -183,7 +189,7 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
 
     @Override
     protected Interpolator getIdleInterpolator() {
-        return EMPHASIZED;
+        return mPanel != null ? mPanel.getCloseInterpolator() : EMPHASIZED; // OpenBook
     }
 
     @Override
@@ -202,6 +208,7 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
 
         DeviceProfile dp = mActivityContext.getDeviceProfile();
         setShiftRange(dp.getAllAppsProfile().getShiftRange());
+        mPanel = AllAppsPanel.create(mActivityContext, this, mAppsView); // OpenBook
     }
 
     @Override
@@ -240,13 +247,20 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         // done the job - there is no need to re-apply scale effect here. But it also means we need
         // to pass extra bottom offset to background scrim to fill the bottom gap during predictive
         // back swipe.
-        mAppsView.drawOnScrimWithBottomOffset(canvas, getBottomOffsetPx());
-        mActivityContext.getOverlayController().setBackgroundBlurRadius(mBlurRadius);
+        if (mPanel == null) { // OpenBook: the panel draws its own glass and leaves the window unblurred
+            mAppsView.drawOnScrimWithBottomOffset(canvas, getBottomOffsetPx());
+            mActivityContext.getOverlayController().setBackgroundBlurRadius(mBlurRadius);
+        }
         super.dispatchDraw(canvas);
     }
 
     @Override
     protected void setTranslationShift(float shift) {
+        if (mPanel != null) { // OpenBook: the panel moves on its own; closing follows this progress
+            mTranslationShift = shift;
+            mPanel.onShift(shift, mToTranslationShift == TRANSLATION_SHIFT_CLOSED);
+            return;
+        }
         super.setTranslationShift(shift);
         mBlurRadius = (int) (mMaxBlurRadius * (1 - shift));
         setScrimAlpha(1 - shift);
@@ -264,11 +278,15 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
 
     @Override
     protected int getScrimColor(Context context) {
+        if (AllAppsPanel.isEnabled(mActivityContext)) return -1; // OpenBook: the panel has no scrim
         return Themes.getAttrColor(context, R.attr.allAppsScrimColor);
     }
 
     @Override
     public boolean onControllerInterceptTouchEvent(MotionEvent ev) {
+        if (mPanel != null) { // OpenBook: the panel isn't swiped; a press outside it closes it
+            return ev.getActionMasked() == MotionEvent.ACTION_DOWN && !isEventOverContent(ev);
+        }
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
             mNoIntercept = !mAppsView.shouldContainerScroll(ev)
                     || getTopOpenViewWithType(
@@ -278,8 +296,19 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
     }
 
     @Override
+    public boolean onControllerTouchEvent(MotionEvent ev) {
+        if (mPanel != null) { // OpenBook
+            if (ev.getActionMasked() == MotionEvent.ACTION_UP && !isEventOverContent(ev)) {
+                close(true);
+            }
+            return true;
+        }
+        return super.onControllerTouchEvent(ev);
+    }
+
+    @Override
     public void setInsets(Rect insets) {
-        mAppsView.setInsets(insets);
+        mAppsView.setInsets(mPanel != null ? mPanel.onInsets(insets) : insets); // OpenBook
     }
 
     @Override

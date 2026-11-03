@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 
 import com.android.app.viewcapture.ViewCaptureFactory;
 import com.android.launcher3.AbstractFloatingView;
+import com.android.launcher3.openbook.AllAppsPanel;
 import com.android.launcher3.taskbar.allapps.TaskbarAllAppsContainerView;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
@@ -109,6 +110,7 @@ public class TaskbarOverlayDragLayer extends
         TaskbarAllAppsContainerView appsView = mContainer.getAppsView();
         if (appsView != null && !appsView.getSearchUiManager().isSearchQueryEmpty()) {
             appsView.getSearchUiManager().resetSearch();
+            AllAppsPanel.onEscapeClearedSearch(mContainer, appsView); // OpenBook: keep typing
             return true;
         }
 

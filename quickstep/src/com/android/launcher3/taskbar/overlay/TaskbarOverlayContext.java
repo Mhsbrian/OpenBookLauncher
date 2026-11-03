@@ -29,6 +29,8 @@ import androidx.annotation.Nullable;
 import com.android.launcher3.DeviceProfile;
 import com.android.launcher3.InsettableFrameLayout.LayoutParams;
 import com.android.launcher3.R;
+import com.android.launcher3.openbook.AllAppsPanel;
+import com.android.launcher3.openbook.AllAppsPanelCells;
 import com.android.launcher3.popup.PopupDataProvider;
 import com.android.launcher3.taskbar.BaseTaskbarContext;
 import com.android.launcher3.taskbar.TaskbarActivityContext;
@@ -54,7 +56,8 @@ import java.util.Optional;
  * Overlays have their own window and need a window context. Some properties are delegated to the
  * {@link TaskbarActivityContext} such as {@link PopupDataProvider}.
  */
-public class TaskbarOverlayContext extends BaseTaskbarContext {
+public class TaskbarOverlayContext extends BaseTaskbarContext
+        implements AllAppsPanelCells.Host { // OpenBook: All Apps as a centred glass panel
     private final TaskbarActivityContext mTaskbarContext;
 
     private final TaskbarOverlayController mOverlayController;
@@ -68,6 +71,7 @@ public class TaskbarOverlayContext extends BaseTaskbarContext {
     private final TaskbarUIController mUiController;
 
     private @Nullable TaskbarSearchSessionController mSearchSessionController;
+    private @Nullable AllAppsPanelCells mAllAppsPanelCells; // OpenBook
 
     public TaskbarOverlayContext(
             Context windowContext,
@@ -124,7 +128,18 @@ public class TaskbarOverlayContext extends BaseTaskbarContext {
 
     @Override
     public DeviceProfile getDeviceProfile() {
-        return mOverlayController.getLauncherDeviceProfile();
+        // OpenBook: the panel's grid in All Apps (AllAppsPanel); the launcher's profile otherwise.
+        return mTaskbarContext == null ? mOverlayController.getLauncherDeviceProfile()
+                : AllAppsPanel.deviceProfile(this, mOverlayController.getLauncherDeviceProfile());
+    }
+
+    /** OpenBook: the panel's cells while this window's All Apps is the panel (AllAppsPanel). */
+    @Override
+    public @Nullable AllAppsPanelCells getAllAppsPanelCells() {
+        if (mAllAppsPanelCells == null && mTaskbarContext != null && AllAppsPanel.isEnabled(this)) {
+            mAllAppsPanelCells = new AllAppsPanelCells(this);
+        }
+        return mAllAppsPanelCells;
     }
 
     @Override

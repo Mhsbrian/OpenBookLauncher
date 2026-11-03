@@ -25,6 +25,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.allapps.AllAppsTransitionListener;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.appprediction.AppsDividerView;
+import com.android.launcher3.openbook.AllAppsPanel;
 import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.taskbar.NavbarButtonsViewController;
@@ -89,7 +90,8 @@ final class TaskbarAllAppsViewController {
     private void setUpAppDivider() {
         mAppsView.getFloatingHeaderView()
                 .findFixedRowByType(AppsDividerView.class)
-                .setShowAllAppsLabel(!ALL_APPS_VISITED_COUNT.hasReachedMax(mContext));
+                .setShowAllAppsLabel(!AllAppsPanel.isEnabled(mContext) // OpenBook: no label in the panel
+                        && !ALL_APPS_VISITED_COUNT.hasReachedMax(mContext));
         ALL_APPS_VISITED_COUNT.increment(mContext);
     }
 
