@@ -345,6 +345,12 @@ object OpenBookMenu {
             popup.elevation = 0f
             popup.clipChildren = false
             popup.clipToPadding = false
+            // The menu holds the keyboard focus even when opened with the pointer (the window is then in touch
+            // mode): the taskbar's and All Apps' windows aren't activities, so Esc reaches their drag layer only
+            // along the focus. Without this, Esc never closed a taskbar menu opened with the mouse (AOSP's either).
+            popup.isFocusable = true
+            popup.isFocusableInTouchMode = true
+            popup.defaultFocusHighlightEnabled = false
             Log.d(TAG, "menu: $spec, glass ${if (glass == null) "none (tint)" else "on"}")
         }
 
@@ -510,9 +516,18 @@ object OpenBookMenu {
          */
         val focusSignal = mutableIntStateOf(0)
 
-        /** The menu is visible: a menu opened from the keyboard focuses its first row. */
+        /**
+         * The menu is visible: a menu opened from the keyboard focuses its first row; one opened with the pointer
+         * takes the focus itself (posted, once its window is focusable), so Esc closes it and ↓ enters its rows.
+         */
         fun focusFirstRow() {
-            if (spec.byKeyboard) focusSignal.intValue++
+            if (spec.byKeyboard) {
+                focusSignal.intValue++
+            } else {
+                popup.post {
+                    if (!popup.hasFocus()) Log.d(TAG, "menu takes the focus: ${popup.requestFocus()}")
+                }
+            }
         }
     }
 
