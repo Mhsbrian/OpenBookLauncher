@@ -385,7 +385,12 @@ private fun LayoutCoordinates.windowRect(): Rect {
 }
 
 /** The menu's tokens in Compose units, read once per menu. */
-private class UiTokens(c: android.content.Context, density: Float, fontScale: Float, touch: Boolean) {
+private class UiTokens(
+    c: android.content.Context,
+    private val density: Float,
+    private val fontScale: Float,
+    touch: Boolean,
+) {
     private val res = c.resources
     private fun dp(id: Int) = Dp(res.getDimension(id) / density)
     private fun sp(id: Int) = (res.getDimension(id) / density / fontScale).sp
