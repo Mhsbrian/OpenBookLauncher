@@ -23,6 +23,7 @@ import com.android.launcher3.BubbleTextView
 import com.android.launcher3.Flags
 import com.android.launcher3.Launcher
 import com.android.launcher3.model.data.ItemInfo
+import com.android.launcher3.openbook.OpenBookMenu
 import com.android.launcher3.popup.ui.PopupItem
 import com.android.launcher3.util.PackageUserKey
 import com.android.launcher3.util.ShortcutUtil
@@ -70,6 +71,9 @@ class PopupControllerForAppIcon<T> : PopupController<T> where T : Context, T : A
             container.deepShortcutDragHandler =
                 LauncherDeepShortcutDragHandler(activityContext as Launcher, container)
             container.configureForLauncher(activityContext, item)
+            if (OpenBookMenu.isEnabled(activityContext)) { // OpenBook: at the pointer, OpenBook's menu
+                container.openBookMenu = OpenBookMenu.app(icon)
+            }
             if (Flags.expandableLongPressMenu()) {
                 val systemShortcutRedesign =
                     systemShortcuts.map { shortcut ->

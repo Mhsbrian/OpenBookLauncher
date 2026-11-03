@@ -150,6 +150,8 @@ import com.android.launcher3.model.WellbeingModel;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.PredictedContainerInfo;
+import com.android.launcher3.openbook.GlassDrawable;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.popup.SystemShortcut;
@@ -257,7 +259,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
 public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
-        SystemShortcut.BubbleActivityStarter {
+        SystemShortcut.BubbleActivityStarter, OpenBookMenu.GlassHost {
     private static final boolean TRACE_LAYOUTS =
             SystemProperties.getBoolean("persist.debug.trace_layouts", false);
     private static final String TRACE_RELAYOUT_CLASS =
@@ -888,7 +890,14 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         return TypeToSearch.onKeyDown(this, event) // OpenBook
                 || OpenBookTaskbar.onLauncherKeyDown(this, event) // OpenBook
+                || OpenBookMenu.onLauncherKeyDown(this, event) // OpenBook: Shift+F10, the menu key
                 || super.onKeyDown(keyCode, event);
+    }
+
+    /** OpenBook: a menu's glass, the platform's blur behind it (openbook/OpenBookMenu). */
+    @Override
+    public OpenBookMenu.Glass createMenuGlass(View view) {
+        return GlassDrawable.forMenu(view);
     }
 
     @Override

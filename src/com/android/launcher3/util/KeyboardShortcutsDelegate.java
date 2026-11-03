@@ -32,6 +32,7 @@ import com.android.launcher3.LauncherState;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.accessibility.BaseAccessibilityDelegate;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.popup.WorkspaceLongPressOptions;
 import com.android.launcher3.testing.shared.TestProtocol;
 
@@ -142,6 +143,9 @@ public class KeyboardShortcutsDelegate {
      * @see android.view.KeyEvent
      */
     public Boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (OpenBookMenu.isMenuKeyUp(mLauncher, keyCode)) {
+            return true; // OpenBook opened its menu on key down (openbook/OpenBookMenu)
+        }
         if (keyCode == KeyEvent.KEYCODE_MENU) {
             // KEYCODE_MENU is sent by some tests, for example
             // LauncherJankTests#testWidgetsContainerFling. Don't just remove its handling.

@@ -47,6 +47,7 @@ import com.android.launcher3.Launcher;
 import com.android.launcher3.Workspace;
 import com.android.launcher3.dragndrop.DragLayer;
 import com.android.launcher3.logger.LauncherAtom;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.TouchUtil;
@@ -115,7 +116,9 @@ public class WorkspaceTouchListener extends GestureDetector.SimpleOnGestureListe
                         dl.getHeight() - insets.bottom);
                 mTempRect.inset(dp.getWorkspaceProfile().getEdgeMarginPx(),
                         dp.getWorkspaceProfile().getEdgeMarginPx());
-                handleLongPress = mTempRect.contains((int) ev.getX(), (int) ev.getY());
+                handleLongPress = mTempRect.contains((int) ev.getX(), (int) ev.getY())
+                        // OpenBook: on a desk a mouse's right-click opens the menu anywhere on the desktop.
+                        || (OpenBookMenu.isEnabled(mLauncher) && TouchUtil.isMouseRightClickDownOrMove(ev));
             }
 
             if (handleLongPress) {

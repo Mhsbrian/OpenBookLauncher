@@ -51,6 +51,7 @@ import com.android.launcher3.model.data.AppInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.TaskItemInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.openbook.TaskbarMenu;
 import com.android.launcher3.popup.PinToTaskbarShortcut;
 import com.android.launcher3.popup.Popup;
 import com.android.launcher3.popup.PopupCategory;
@@ -277,6 +278,8 @@ public class TaskbarPopupController implements TaskbarControllers.LoggableTaskba
                 /*itemInfo */ itemInfo,
                 /* updateIconUi */ false);
         container.setDeepShortcutDragHandler(new TaskbarDeepShortcutDragHandler(context));
+        // OpenBook (openbook/TaskbarMenu): the header, the app's windows, design §4's order.
+        container.setOpenBookMenu(TaskbarMenu.spec(context, mControllers, icon, itemInfo));
         if (Flags.expandableLongPressMenu()) {
             List<PopupItem> systemShortcutPopups =
                     systemShortcuts.stream().map(shortcut -> new PopupItem(

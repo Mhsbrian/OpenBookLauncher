@@ -191,6 +191,15 @@ class TaskbarRecentAppsController(
             .map { it.key.id }
     }
 
+    /** OpenBook: the running desktop tasks themselves, as [openBookTaskIds] (openbook/TaskbarMenu's windows). */
+    fun openBookTasks(packageName: String, userId: Int): List<Task> {
+        if (runningTaskIds.isEmpty()) return emptyList()
+        return taskbarRunningTasks
+            .flatMap { it.tasks }
+            .filter { it.key.packageName == packageName && it.key.userId == userId }
+            .distinctBy { it.key.id }
+    }
+
     /** Returns the single task (i.e., fullscreen) represented by the given [itemInfo]. */
     fun getSingleTask(itemInfo: ItemInfo?): SingleTask? {
         val packageName = itemInfo?.targetPackage ?: return null

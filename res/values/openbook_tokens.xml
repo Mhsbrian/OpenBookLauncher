@@ -105,6 +105,51 @@
     <dimen name="ob_shadow_ambient_y">2dp</dimen>
     <dimen name="ob_shadow_ambient_blur">6dp</dimen>
 
+    <!-- §4 Menus: one glass menu for the desktop, a taskbar icon and an All Apps icon. 224 to 320 dp wide, 6 dp
+         padding, 16 dp corners; 36 dp rows (48 dp opened by touch) with 10 dp corners and 12 dp sides; 20 dp icons
+         12 dp before the label (14/20, weight 450); hints 12/16; dividers 1 dp with 6 dp above and below, inset
+         12 dp; the taskbar menu's 44 dp header (a 24 dp icon, the name at weight 600) and its windows (a 20 × 14 dp
+         outline, the front one in `primary` at 1.5 dp). Desktop menus open at the pointer, flipping at the edges
+         ob_mn_margin from them; taskbar menus are centred over the icon, ob_mn_bar_gap above the bar. -->
+    <dimen name="ob_mn_min_width">224dp</dimen>
+    <dimen name="ob_mn_max_width">320dp</dimen>
+    <dimen name="ob_mn_padding">6dp</dimen>
+    <dimen name="ob_mn_radius">16dp</dimen>
+    <dimen name="ob_mn_row">36dp</dimen>
+    <dimen name="ob_mn_row_touch">48dp</dimen>
+    <dimen name="ob_mn_row_radius">10dp</dimen>
+    <dimen name="ob_mn_row_padding">12dp</dimen>
+    <dimen name="ob_mn_icon">20dp</dimen>
+    <dimen name="ob_mn_icon_gap">12dp</dimen>
+    <dimen name="ob_mn_hint_gap">16dp</dimen>
+    <dimen name="ob_mn_text">14sp</dimen>
+    <dimen name="ob_mn_line">20sp</dimen>
+    <integer name="ob_mn_weight">450</integer>
+    <integer name="ob_mn_weight_strong">600</integer>
+    <dimen name="ob_mn_hint_text">12sp</dimen>
+    <dimen name="ob_mn_hint_line">16sp</dimen>
+    <dimen name="ob_mn_divider">1dp</dimen>
+    <dimen name="ob_mn_divider_margin">6dp</dimen>
+    <item name="ob_mn_divider_alpha" format="float" type="dimen">0.50</item>
+    <dimen name="ob_mn_header">44dp</dimen>
+    <dimen name="ob_mn_header_icon">24dp</dimen>
+    <dimen name="ob_mn_header_gap">10dp</dimen>
+    <dimen name="ob_mn_thumb_width">20dp</dimen>
+    <dimen name="ob_mn_thumb_height">14dp</dimen>
+    <dimen name="ob_mn_thumb_radius">3dp</dimen>
+    <dimen name="ob_mn_thumb_stroke">1dp</dimen>
+    <dimen name="ob_mn_thumb_stroke_front">1.5dp</dimen>
+    <dimen name="ob_mn_margin">8dp</dimen>
+    <dimen name="ob_mn_bar_gap">8dp</dimen>
+    <!-- The menu's shadow (§4): 0 12 32, lighter than a panel's; the ambient layer is the panels' 0 2 6. -->
+    <dimen name="ob_mn_shadow_key_y">12dp</dimen>
+    <dimen name="ob_mn_shadow_key_blur">32dp</dimen>
+    <!-- §4 Motion: open scales from 0.94 about the anchor's corner with a fade, 150 ms emphasised decelerate;
+         close fades in 100 ms. -->
+    <item name="ob_mn_open_scale" format="float" type="dimen">0.94</item>
+    <integer name="ob_mn_open_ms">150</integer>
+    <integer name="ob_mn_close_ms">100</integer>
+
     <!-- §7 Motion. Springs: stiffness, damping ratio. Durations in ms. -->
     <item name="ob_spring_panel_stiffness" format="float" type="dimen">500</item>
     <item name="ob_spring_panel_damping" format="float" type="dimen">0.90</item>
@@ -122,4 +167,9 @@
 
     <!-- §3.3 Our own wording; English only, like the rest of OpenBook's strings here. -->
     <string name="ob_aa_no_results" translatable="false">No apps match “%1$s”</string>
+    <!-- §4 Menus. -->
+    <string name="ob_mn_display_settings" translatable="false">Display settings</string>
+    <string name="ob_mn_close_windows" translatable="false">Close %1$d windows</string>
+    <string name="ob_mn_hint_middle_click" translatable="false">Middle-click</string>
+    <string name="ob_mn_window_number" translatable="false">%1$s (%2$d)</string>
 </resources>

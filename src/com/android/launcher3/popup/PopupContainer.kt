@@ -16,10 +16,13 @@
 
 package com.android.launcher3.popup
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.content.Context
 import android.graphics.PointF
 import android.graphics.Rect
+import android.os.SystemClock
 import android.os.Trace
 import android.view.MotionEvent
 import android.view.View
@@ -45,7 +48,10 @@ import com.android.launcher3.model.data.ItemInfo
 import com.android.launcher3.model.data.ItemInfoWithIcon
 import com.android.launcher3.model.data.WorkspaceItemInfo
 import com.android.launcher3.popup.ui.ComposePopup
+import com.android.launcher3.openbook.OpenBookMenu
+import com.android.launcher3.openbook.OpenBookMenuContent
 import com.android.launcher3.popup.ui.DeepShortcutClickEvent
+import com.android.launcher3.popup.ui.PopupClickEvent
 import com.android.launcher3.popup.ui.PopupItem
 import com.android.launcher3.popup.ui.PopupViewModel
 import com.android.launcher3.popup.ui.SystemShortcutClickEvent
@@ -85,6 +91,10 @@ open class PopupContainer<T : ActivityContext>(
     private val animationProxyView by lazy { View(context).apply { visibility = INVISIBLE } }
 
     private var fixedDragLayerPos: Rect? = null
+
+    /** OpenBook's menu (openbook/OpenBookMenu): set before showing for OpenBook's look; null keeps AOSP's popup. */
+    var openBookMenu: OpenBookMenu.Spec? = null
+    private var openBookShown: OpenBookMenu.Menu? = null
 
     /** Handles a deep shortcut click event. */
     private fun onDeepShortcutClick(item: WorkspaceItemInfo, iconBounds: Rect) {
@@ -180,24 +190,52 @@ open class PopupContainer<T : ActivityContext>(
             LauncherPrefs.get(context),
         )
 
+        val onClickListener = { clickedItem: PopupClickEvent ->
+            when (clickedItem) {
+                is SystemShortcutClickEvent -> {
+                    clickedItem.item.popupAction()
+                }
+                is DeepShortcutClickEvent -> {
+                    (clickedItem.item as? WorkspaceItemInfo)?.let {
+                        onDeepShortcutClick(it, clickedItem.iconBounds)
+                    }
+                }
+            }
+            close(true)
+        }
+        val openBook = openBookMenu?.let { OpenBookMenu.Menu(this, it) }
+        openBookShown = openBook
         val composePopup =
             ComposeView(context).apply {
                 setContent {
+                    if (openBook != null) {
+                        OpenBookMenuContent(
+                            spec = openBook.spec,
+                            focusSignal = openBook.focusSignal,
+                            focusLast = openBook.focusLast,
+                            items = systemShortcuts,
+                            deepShortcuts = viewModel.state.deepShortcuts,
+                            onItem = { onClickListener(SystemShortcutClickEvent(it)) },
+                            onDeepShortcut = { item, bounds ->
+                                onClickListener(DeepShortcutClickEvent(item, bounds))
+                            },
+                            onDeepShortcutLongPress = { item, offset ->
+                                deepShortcutDragHandler?.onDeepShortcutLongPress(
+                                    item,
+                                    PointF(offset.x, offset.y),
+                                )
+                            },
+                            onWindow = { window ->
+                                window.onClick()
+                                close(true)
+                            },
+                            onShown = { positionAndShow(0) },
+                        )
+                        return@setContent
+                    }
                     ComposePopup(
                         viewModel = viewModel,
-                        onClickListener = { clickedItem ->
-                            when (clickedItem) {
-                                is SystemShortcutClickEvent -> {
-                                    clickedItem.item.popupAction()
-                                }
-                                is DeepShortcutClickEvent -> {
-                                    (clickedItem.item as? WorkspaceItemInfo)?.let {
-                                        onDeepShortcutClick(it, clickedItem.iconBounds)
-                                    }
-                                }
-                            }
-                            close(true)
-                        },
+                        onClickListener = onClickListener,
                         onAddIconClick =
                             if (canAddShortcut())
                                 { clickedItem ->
@@ -241,12 +279,67 @@ open class PopupContainer<T : ActivityContext>(
     }
 
     private fun positionAndShow(@Px maxHeightPx: Int) {
+        openBookShown?.let {
+            it.show(popupContainer) { animateOpen() }
+            return
+        }
         orientAboutObject(maxHeightPx)
         assignMarginsAndBackgrounds(this)
         if (shouldAddArrow()) {
             addArrow()
         }
         animateOpen()
+    }
+
+    override fun shouldAddArrow(): Boolean = openBookShown == null && super.shouldAddArrow()
+
+    override fun keepsOwnPosition(): Boolean = openBookShown != null
+
+    override fun animateOpen() {
+        val menu = openBookShown ?: return super.animateOpen()
+        visibility = VISIBLE
+        val anim = AnimatorSet()
+        anim.play(menu.openAnimator())
+        mOpenCloseAnimator = anim
+        val start = SystemClock.uptimeMillis()
+        anim.addListener(
+            object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    alpha = 1f
+                    announceAccessibilityChanges()
+                    mOpenCloseAnimator = null
+                    menu.logMotion("open", start)
+                }
+            }
+        )
+        anim.start()
+        menu.focusFirstRow()
+    }
+
+    override fun animateClose() {
+        val menu = openBookShown ?: return super.animateClose()
+        if (!mIsOpen) return
+        mOpenCloseAnimator?.cancel()
+        mIsOpen = false
+        val anim = AnimatorSet()
+        anim.play(menu.closeAnimator())
+        onCreateCloseAnimation(anim)
+        mOpenCloseAnimator = anim
+        val start = SystemClock.uptimeMillis()
+        anim.addListener(
+            object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    mOpenCloseAnimator = null
+                    menu.logMotion("close", start)
+                    if (mDeferContainerRemoval) {
+                        visibility = INVISIBLE
+                    } else {
+                        closeComplete()
+                    }
+                }
+            }
+        )
+        anim.start()
     }
 
     @CallSuper
@@ -257,6 +350,7 @@ open class PopupContainer<T : ActivityContext>(
 
     @CallSuper
     override fun closeComplete() {
+        openBookShown?.detach()
         super.closeComplete()
         popupContainer.removeView(animationProxyView)
         mActivityContext?.dragController?.removeDragListener(this)
@@ -438,6 +532,7 @@ open class PopupContainer<T : ActivityContext>(
             view: View,
             items: List<PopupData>,
             popupPos: Rect? = null,
+            openBookMenu: OpenBookMenu.Spec? = null,
         ): PopupContainer<ActivityContext>? {
             if (items.isEmpty()) return null
             return create<ActivityContext>(
@@ -446,6 +541,7 @@ open class PopupContainer<T : ActivityContext>(
                     view.tag as? ItemInfo ?: ItemInfo().apply { itemType = ITEM_TYPE_CUSTOM_VIEW },
                 )
                 .apply {
+                    this.openBookMenu = openBookMenu
                     fixedDragLayerPos = popupPos
                     showForSystemShortcuts(items, activity, view)
                 }
