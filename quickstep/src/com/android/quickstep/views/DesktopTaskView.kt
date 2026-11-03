@@ -38,6 +38,7 @@ import androidx.core.view.updateLayoutParams
 import com.android.internal.jank.Cuj.CUJ_LAUNCHER_APP_LAUNCH_FROM_RECENTS
 import com.android.launcher3.R
 import com.android.launcher3.dagger.ActivityContextComponent
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.statehandlers.DesktopVisibilityController
 import com.android.launcher3.testing.TestLogging
 import com.android.launcher3.testing.shared.TestProtocol
@@ -64,6 +65,7 @@ import com.android.quickstep.task.thumbnail.TaskContentView
 import com.android.quickstep.task.thumbnail.TaskThumbnailView
 import com.android.quickstep.util.DesktopTask
 import com.android.quickstep.util.RecentsOrientedState
+import com.android.quickstep.util.TaskCornerRadius
 import com.android.quickstep.util.getRemoteTargetHandle
 import com.android.systemui.shared.system.InteractionJankMonitorWrapper
 import kotlin.math.roundToInt
@@ -90,7 +92,12 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
                 ?.key
                 ?.id
 
-    private val contentViewFullscreenParams = FullscreenDrawParams(context)
+    // OpenBook: a desk tile has 20 dp corners in Overview (design §5.2).
+    private val contentViewFullscreenParams =
+        FullscreenDrawParams(
+            context,
+            { OverviewDesks.deskTileRadius(it) ?: TaskCornerRadius.get(it) },
+        )
 
     private val taskContentViewPool =
         ViewPool<TaskContentView>(
@@ -155,9 +162,11 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
             findViewById<DesktopTaskContentView>(R.id.desktop_content).apply {
                 cornerRadius = contentViewFullscreenParams.currentCornerRadius
                 backgroundView = findViewById(R.id.background)
-                backgroundView.setBackgroundColor(
-                    resources.getColor(android.R.color.system_neutral2_300, context.theme)
-                )
+                val flat = resources.getColor(android.R.color.system_neutral2_300, context.theme)
+                // OpenBook: the desk's wallpaper behind its windows (design §5.2).
+                if (!OverviewDesks.deskBackground(backgroundView, flat)) {
+                    backgroundView.setBackgroundColor(flat)
+                }
             }
     }
 
@@ -354,7 +363,14 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
                         context.theme,
                     ),
                 )
-                setText(resources.getText(R.string.recent_task_desktop))
+                // OpenBook: the desk's label lists its apps (design §5.2).
+                setText(
+                    OverviewDesks.deskLabel(
+                        context,
+                        resources.getText(R.string.recent_task_desktop),
+                        tasks.filterNot { it.isMinimized }.mapNotNull { it.key.packageName },
+                    )
+                )
             }
         iconTouchDelegate = TransformingTouchDelegate(iconView)
 
@@ -407,6 +423,15 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
     override fun updateTaskSize(lastComputedTaskSize: Rect, lastComputedGridTaskSize: Rect) {
         super.updateTaskSize(lastComputedTaskSize, lastComputedGridTaskSize)
         this.lastComputedTaskSize.set(lastComputedTaskSize)
+        // OpenBook: the tile has the display's shape (design §5.2). The desk's windows keep AOSP's area, above
+        // the taskbar; the picture continues under it, where the taskbar sits, so the transitions map as before.
+        OverviewDesks.deskPictureHeight(
+                context,
+                layoutParams.height,
+                getScreenRect().height(),
+                container.deviceProfile,
+            )
+            ?.let { h -> contentView.updateLayoutParams<LayoutParams> { height = h } }
 
         updateTaskPositions()
     }
@@ -424,6 +449,24 @@ class DesktopTaskView @JvmOverloads constructor(context: Context, attrs: Attribu
         } else {
             bounds.set(contentView)
         }
+        // OpenBook: transitions map the windows' area, not the strip under the taskbar.
+        if (relativeToDragLayer && contentView.height > height && height > 0) {
+            bounds.bottom = bounds.top + bounds.height() * height / contentView.height
+        }
+    }
+
+    // OpenBook: the strip of the picture under the taskbar's place is part of the tile for the pointer and
+    // touch (hover lift, click to open the desk), though it lies below this view's bounds.
+    override fun pointInView(localX: Float, localY: Float, slop: Float): Boolean =
+        super.pointInView(localX, localY, slop) ||
+            (contentView.height > height &&
+                localX >= -slop &&
+                localX < width + slop &&
+                localY >= 0 &&
+                localY < contentView.height + slop)
+
+    override fun getTileBounds(bounds: Rect) {
+        bounds.set(contentView)
     }
 
     /**

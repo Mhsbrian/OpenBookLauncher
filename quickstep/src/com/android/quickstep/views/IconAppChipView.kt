@@ -43,6 +43,7 @@ import com.android.launcher3.LauncherAnimUtils.VIEW_TRANSLATE_Y
 import com.android.launcher3.LauncherAnimUtils.getScaleProperty
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.util.MSDLPlayerWrapper
 import com.android.launcher3.util.MultiPropertyDelegate
 import com.android.launcher3.util.MultiPropertyFactory
@@ -73,6 +74,10 @@ constructor(
     private var appTitle: TextView? = null
     private var isLayoutNaturalToLauncher = true
 
+    // OpenBook: on a desk, Overview's label is a glass chip above its tile (design §5.2).
+    private val label = OverviewDesks.label(context)
+    private var labelOrientation: RecentsOrientedState? = null
+
     private val backgroundRelativeLtrLocation = Rect()
     private val backgroundAnimationRectEvaluator = RectEvaluator(backgroundRelativeLtrLocation)
 
@@ -82,7 +87,8 @@ constructor(
     private val expandedMenuDefaultWidth: Int =
         resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_expanded_width)
     private val collapsedMenuDefaultHeight =
-        resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_collapsed_height)
+        label?.height
+            ?: resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_collapsed_height)
     private val expandedMenuDefaultHeight =
         resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_expanded_height)
     private val iconMenuMarginTopStart =
@@ -98,28 +104,37 @@ constructor(
 
     // Contents dimensions
     private val appNameHorizontalMarginCollapsed =
-        resources.getDimensionPixelSize(
-            R.dimen.task_thumbnail_icon_menu_app_name_margin_horizontal_collapsed
-        )
+        label?.gap
+            ?: resources.getDimensionPixelSize(
+                R.dimen.task_thumbnail_icon_menu_app_name_margin_horizontal_collapsed
+            )
     private val appNameHorizontalMarginExpanded =
         resources.getDimensionPixelSize(
             R.dimen.task_thumbnail_icon_menu_app_name_margin_horizontal_expanded
         )
     private val arrowMarginEnd =
-        resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_arrow_margin)
+        label?.paddingEnd
+            ?: resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_arrow_margin)
     private val iconViewMarginStart =
-        resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_view_start_margin)
+        label?.paddingStart
+            ?: resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_view_start_margin)
     private val appIconSize =
-        resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_app_icon_collapsed_size)
+        label?.icon
+            ?: resources.getDimensionPixelSize(
+                R.dimen.task_thumbnail_icon_menu_app_icon_collapsed_size
+            )
     private val iconMenuElevation =
-        resources.getDimension(R.dimen.task_thumbnail_icon_menu_elevation)
+        if (label != null) 0f
+        else resources.getDimension(R.dimen.task_thumbnail_icon_menu_elevation)
     private val arrowSize =
-        resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_arrow_size)
+        if (label != null) 0
+        else resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_arrow_size)
     private val iconViewDrawableExpandedSize =
         resources.getDimensionPixelSize(R.dimen.task_thumbnail_icon_menu_app_icon_expanded_size)
     private val focusBorderWidth =
         resources.getDimensionPixelSize(R.dimen.app_chip_keyboard_border_width)
-    private val cornerRadius = resources.getDimensionPixelSize(R.dimen.app_chip_round_corner_radius)
+    private val cornerRadius =
+        label?.radius ?: resources.getDimensionPixelSize(R.dimen.app_chip_round_corner_radius)
 
     private var animator: AnimatorSet? = null
 
@@ -244,11 +259,33 @@ constructor(
         appTitle = findViewById(R.id.icon_title)
         iconArrowView = findViewById(R.id.icon_arrow)
         menuAnchorView = findViewById(R.id.icon_view_menu_anchor)
+        label?.let { l ->
+            l.styleText(appTitle!!)
+            iconArrowView?.visibility = GONE
+            elevation = 0f
+            background =
+                l.glass(this) { r ->
+                    r.set(backgroundRelativeLtrLocation)
+                    if (isLayoutRtl) {
+                        val left = width - r.right
+                        r.right = width - r.left
+                        r.left = left
+                    }
+                }
+        }
+    }
+
+    override fun invalidateOutline() {
+        super.invalidateOutline()
+        // OpenBook: the glass follows the background as it grows into the menu's header.
+        if (label != null) invalidate()
     }
 
     fun setText(text: CharSequence?) {
         if (text == appTitle?.text) return
         appTitle?.text = text
+        // OpenBook: the label sizes to its text.
+        if (label != null) labelOrientation?.let { setIconOrientation(it) }
     }
 
     fun getDrawable(): Drawable? = iconView?.drawable
@@ -261,7 +298,14 @@ constructor(
         currentIconDrawableHash = icon.hashCode()
     }
 
-    override fun getMinimumWidth(): Int = min(maxWidth, collapsedMenuDefaultWidth)
+    override fun getMinimumWidth(): Int =
+        min(
+            maxWidth,
+            label?.width(
+                appTitle,
+                (parent as? View)?.layoutParams?.width?.takeIf { it > 0 } ?: Int.MAX_VALUE,
+            ) ?: collapsedMenuDefaultWidth,
+        )
 
     fun setIconOrientation(orientationState: RecentsOrientedState) {
         val orientationHandler = orientationState.orientationHandler
@@ -288,6 +332,10 @@ constructor(
             iconMenuMarginTopStart,
             iconMenuMarginTopStart,
         )
+        if (label != null) {
+            label.place(iconMenuParams, backgroundMarginTopStart)
+            labelOrientation = orientationState
+        }
         layoutParams = iconMenuParams
 
         // Layout params for the background
@@ -304,10 +352,7 @@ constructor(
                         mRtlAppliedOutlineBounds.left = width - backgroundRelativeLtrLocation.right
                         mRtlAppliedOutlineBounds.right = width - backgroundRelativeLtrLocation.left
                     }
-                    outline.setRoundRect(
-                        mRtlAppliedOutlineBounds,
-                        resources.getDimension(R.dimen.app_chip_round_corner_radius),
-                    )
+                    outline.setRoundRect(mRtlAppliedOutlineBounds, cornerRadius.toFloat())
                 }
             }
 

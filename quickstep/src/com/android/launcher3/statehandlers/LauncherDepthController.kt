@@ -22,6 +22,7 @@ import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.android.launcher3.Flags
 import com.android.launcher3.LauncherState
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.uioverrides.QuickstepLauncher
 import com.android.launcher3.util.ListenableRef
 
@@ -32,8 +33,17 @@ class LauncherDepthController(
 ) : DepthController<LauncherState, QuickstepLauncher>(launcher, blurState) {
 
     override fun shouldBlur(): Boolean {
-        return super.shouldBlur() && !Flags.allAppsSurface()
+        // OpenBook: Overview's backdrop blurs on a desk (design §5.2); All Apps keeps this rule.
+        return super.shouldBlur() &&
+            (!Flags.allAppsSurface() || OverviewDesks.blursBackdrop(launcher))
     }
+
+    override fun getMaxBlurRadius(): Int =
+        if (OverviewDesks.isEnabled(launcher)) OverviewDesks.blurRadius(launcher)
+        else super.getMaxBlurRadius()
+
+    override fun getWallpaperZoom(depth: Float): Float =
+        if (OverviewDesks.blursBackdrop(launcher)) 0f else super.getWallpaperZoom(depth)
 
     override fun onDepthAndBlurApplied() {
         super.onDepthAndBlurApplied()

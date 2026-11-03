@@ -30,6 +30,7 @@ import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.LauncherUiState;
 import com.android.launcher3.R;
+import com.android.launcher3.openbook.OverviewDesks;
 import com.android.launcher3.display.DisplayController;
 import com.android.launcher3.statehandlers.DepthController;
 import com.android.launcher3.uioverrides.QuickstepLauncher;
@@ -167,6 +168,10 @@ public class OverviewState extends LauncherState {
 
     @Override
     public ScrimColors getWorkspaceScrimColor(Launcher launcher) {
+        if (OverviewDesks.isEnabled(launcher)) {
+            // OpenBook: a light tint over the blurred backdrop instead of the scrim (design §5.2).
+            return new ScrimColors(OverviewDesks.scrimColor(launcher), Color.TRANSPARENT);
+        }
         return new ScrimColors(
                 /* backgroundColor= */ Themes.getAttrColor(launcher, R.attr.overviewScrimColor),
                 /* foregroundColor= */ Color.TRANSPARENT);

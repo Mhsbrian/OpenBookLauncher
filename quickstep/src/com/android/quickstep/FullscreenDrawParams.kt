@@ -19,6 +19,7 @@ package com.android.quickstep
 import android.content.Context
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.util.SafeCloseable
 import com.android.launcher3.views.ActivityContext
 import com.android.quickstep.util.TaskCornerRadius
@@ -62,7 +63,9 @@ constructor(
     override fun close() {}
 
     companion object {
-        private fun computeTaskCornerRadius(context: Context): Float = TaskCornerRadius.get(context)
+        // OpenBook: an app tile has 16 dp corners in Overview (design §5.2).
+        private fun computeTaskCornerRadius(context: Context): Float =
+            OverviewDesks.appTileRadius(context) ?: TaskCornerRadius.get(context)
 
         private fun computeWindowCornerRadius(context: Context): Float {
             val activityContext: ActivityContext =

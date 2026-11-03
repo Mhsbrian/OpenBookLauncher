@@ -59,6 +59,7 @@ import com.android.launcher3.concurrent.annotations.LightweightBackgroundPriorit
 import com.android.launcher3.concurrent.annotations.Ui
 import com.android.launcher3.dagger.ActivityContextComponent
 import com.android.launcher3.logging.StatsLogManager.LauncherEvent
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.model.data.TaskViewItemInfo
 import com.android.launcher3.testing.TestLogging
 import com.android.launcher3.testing.shared.TestProtocol
@@ -305,6 +306,19 @@ constructor(
                     ),
             )
 
+    /**
+     * OpenBook: on a desk, a tile's shadow, outline, hover lift and focus ring replace the borders above (design
+     * §5.2); null elsewhere.
+     */
+    private val tileDecor: OverviewDesks.TileDecor? =
+        OverviewDesks.tileDecor(
+            this,
+            { type == TaskViewType.DESKTOP },
+            { getTileBounds(it) },
+            { 1f - fullscreenProgress },
+            ::onTileLift,
+        )
+
     private val rootViewDisplayId: Int
         get() = rootView.display?.displayId ?: Display.DEFAULT_DISPLAY
 
@@ -331,6 +345,7 @@ constructor(
         set(value) {
             if (value == field) return
             field = Utilities.boundToRange(value, 0f, 1f)
+            if (field > 0f) tileDecor?.rest()
             onFullscreenProgressChanged(field)
         }
 
@@ -516,6 +531,11 @@ constructor(
             field = value
             // Set the animation correctly in case it misses the hover/focus event during state
             // transition
+            if (tileDecor != null) {
+                tileDecor.hovered = field && isHovered
+                tileDecor.focused = field && isFocused
+                return
+            }
             hoverBorderAnimator.setBorderVisibility(visible = field && isHovered, animated = true)
             focusBorderAnimator.setBorderVisibility(visible = field && isFocused, animated = true)
         }
@@ -534,6 +554,10 @@ constructor(
                 TAG,
                 "${taskIds.contentToString()} - setting border animator visibility to: $field",
             )
+            if (tileDecor != null) {
+                tileDecor.hovered = field
+                return
+            }
             hoverBorderAnimator.setBorderVisibility(visible = field, animated = true)
         }
 
@@ -606,7 +630,11 @@ constructor(
     ) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
         if (borderEnabled) {
-            focusBorderAnimator.setBorderVisibility(gainFocus, /* animated= */ true)
+            if (tileDecor != null) {
+                tileDecor.focused = gainFocus
+            } else {
+                focusBorderAnimator.setBorderVisibility(gainFocus, /* animated= */ true)
+            }
         }
     }
 
@@ -700,6 +728,12 @@ constructor(
     }
 
     override fun draw(canvas: Canvas) {
+        if (tileDecor != null) {
+            tileDecor.drawBehind(canvas)
+            super.draw(canvas)
+            tileDecor.drawOver(canvas)
+            return
+        }
         // Draw border first so any child views outside of the thumbnail bounds are drawn above it.
         focusBorderAnimator.drawBorder(canvas)
         hoverBorderAnimator.drawBorder(canvas)
@@ -755,6 +789,7 @@ constructor(
         taskThumbnailSplashAlpha = 0f
         borderEnabled = false
         hoverBorderVisible = false
+        tileDecor?.rest()
         taskViewId = UNBOUND_TASK_VIEW_ID
         // TODO(b/390583187): Clean the components UI State when TaskView is recycled.
         taskContainers.forEach { it.destroy() }
@@ -1227,6 +1262,11 @@ constructor(
 
     protected open fun updateThumbnailSize() {
         taskContainers.forEach { it.digitalWellBeingToast?.setupLayout() }
+    }
+
+    /** OpenBook: the tile's picture as Overview shows it (design §5.2), in this view's coordinates. */
+    open fun getTileBounds(bounds: Rect) {
+        getThumbnailBounds(bounds)
     }
 
     /** Returns the thumbnail's bounds, optionally relative to the screen. */
@@ -1801,7 +1841,24 @@ constructor(
                 taskResistanceTranslationY +
                 splitSelectTranslationY +
                 persistentTranslationY +
-                animateToIconTranslationY
+                animateToIconTranslationY +
+                (tileDecor?.lift ?: 0f)
+    }
+
+    /**
+     * OpenBook: the hover lift moved; a live tile's windows are surfaces, moved with it while Overview is settled
+     * (as a swipe to dismiss moves them).
+     */
+    private fun onTileLift() {
+        applyTranslationY()
+        val rv = recentsView ?: return
+        if (isRunningTask && rv.enableDrawingLiveTile && OverviewDesks.settledInOverview(context)) {
+            rv.runActionOnRemoteHandles { remoteTargetHandle ->
+                remoteTargetHandle.taskViewSimulator.taskSecondaryTranslation.value =
+                    tileDecor?.lift ?: 0f
+            }
+            rv.redrawLiveTile()
+        }
     }
 
     private fun onGridProgressChanged() {

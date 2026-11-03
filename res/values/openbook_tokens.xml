@@ -150,6 +150,45 @@
     <integer name="ob_mn_open_ms">150</integer>
     <integer name="ob_mn_close_ms">100</integer>
 
+    <!-- §5.2 Overview for desks. The backdrop: the glass blur (ob_glass_blur) under `surface` at 18 % (light) or
+         30 % (dark). Tiles: 20 dp corners for a desk, 16 dp for an app; a 1 dp lit outline (the glass outline) and a
+         soft shadow, 0 16 40 at 20 % black; hover lifts a tile 4 dp on spring.settle with a deeper shadow, 0 24 56 at
+         26 %; keyboard focus is a two-colour ring outside the edge, three 2 dp bands (surfaceContainerLowest,
+         onPrimaryContainer, surfaceContainerLowest; WCAG technique C40). Clear all: a 40 dp glass chip, its bottom
+         40 dp above the taskbar, an 18 dp glyph 8 dp before "Clear all" at 14/20 and weight 500, padding 14 and 18. -->
+    <item name="ob_ov_scrim_light" format="float" type="dimen">0.18</item>
+    <item name="ob_ov_scrim_dark" format="float" type="dimen">0.30</item>
+    <dimen name="ob_ov_desk_radius">20dp</dimen>
+    <dimen name="ob_ov_app_radius">16dp</dimen>
+    <dimen name="ob_ov_lift">4dp</dimen>
+    <dimen name="ob_ov_ring_band">2dp</dimen>
+    <dimen name="ob_ov_shadow_y">16dp</dimen>
+    <dimen name="ob_ov_shadow_blur">40dp</dimen>
+    <item name="ob_ov_shadow_alpha" format="float" type="dimen">0.20</item>
+    <dimen name="ob_ov_shadow_hover_y">24dp</dimen>
+    <dimen name="ob_ov_shadow_hover_blur">56dp</dimen>
+    <item name="ob_ov_shadow_hover_alpha" format="float" type="dimen">0.26</item>
+    <dimen name="ob_ov_chip_height">40dp</dimen>
+    <dimen name="ob_ov_chip_above_bar">40dp</dimen>
+    <dimen name="ob_ov_chip_icon">18dp</dimen>
+    <dimen name="ob_ov_chip_gap">8dp</dimen>
+    <dimen name="ob_ov_chip_padding_start">14dp</dimen>
+    <dimen name="ob_ov_chip_padding_end">18dp</dimen>
+    <dimen name="ob_ov_chip_text">14sp</dimen>
+    <dimen name="ob_ov_chip_line">20sp</dimen>
+    <integer name="ob_ov_chip_weight">500</integer>
+    <!-- §5.2 Labels: a 28 dp glass chip 12 dp above the tile; a 20 dp icon 4 dp from the start, 8 dp before the
+         name at 13/18 and weight 500, 12 dp after it. -->
+    <dimen name="ob_ov_label_height">28dp</dimen>
+    <dimen name="ob_ov_label_above">12dp</dimen>
+    <dimen name="ob_ov_label_icon">20dp</dimen>
+    <dimen name="ob_ov_label_padding_start">4dp</dimen>
+    <dimen name="ob_ov_label_padding_end">12dp</dimen>
+    <dimen name="ob_ov_label_gap">8dp</dimen>
+    <dimen name="ob_ov_label_text">13sp</dimen>
+    <dimen name="ob_ov_label_line">18sp</dimen>
+    <integer name="ob_ov_label_weight">500</integer>
+
     <!-- §7 Motion. Springs: stiffness, damping ratio. Durations in ms. -->
     <item name="ob_spring_panel_stiffness" format="float" type="dimen">500</item>
     <item name="ob_spring_panel_damping" format="float" type="dimen">0.90</item>
@@ -164,6 +203,7 @@
 
     <item type="id" name="openbook_taskbar_icon_state" />
     <item type="id" name="openbook_allapps_cell_state" />
+    <item type="id" name="openbook_clear_all_chip" />
 
     <!-- §3.3 Our own wording; English only, like the rest of OpenBook's strings here. -->
     <string name="ob_aa_no_results" translatable="false">No apps match “%1$s”</string>
