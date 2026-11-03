@@ -53,6 +53,7 @@ import com.android.launcher3.InsettableFrameLayout;
 import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.dragndrop.DragLayer;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.shortcuts.DeepShortcutView;
 import com.android.launcher3.util.RunnableList;
 import com.android.launcher3.util.Themes;
@@ -126,6 +127,9 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
     protected int mArrowColor;
 
     protected float mElevation;
+
+    /** Styled as OpenBook's menu (openbook/OpenBookMenu.styleViewPopup). */
+    protected boolean mOpenBookStyled;
 
     // Tag for Views that have children that will need to be iterated to add styling.
     private final String mIterateChildrenTag;
@@ -225,6 +229,10 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
      *                        Otherwise, we will use this color for all child views.
      */
     protected void assignMarginsAndBackgrounds(ViewGroup viewGroup, int backgroundColor) {
+        if (mOpenBookStyled && OpenBookMenu.styleViewRows(viewGroup)) {
+            measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED);
+            return;
+        }
         int[] colors = null;
         if (backgroundColor == Color.TRANSPARENT) {
             // Lazily get the colors so they match the current wallpaper colors.
@@ -320,6 +328,8 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
      * Shows the popup at the desired location.
      */
     public void show() {
+        // OpenBook (openbook/OpenBookMenu): a desk's view popups get the menu's glass, rows and no arrow.
+        mOpenBookStyled = OpenBookMenu.styleViewPopup(this);
         setupForDisplay();
         assignMarginsAndBackgrounds(this);
         if (shouldAddArrow()) {
@@ -382,7 +392,12 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
      * Returns whether or not we should add the arrow.
      */
     protected boolean shouldAddArrow() {
-        return true;
+        return !mOpenBookStyled;
+    }
+
+    /** Whether this popup placed itself (OpenBook's menu), so layout must not re-centre it. */
+    protected boolean keepsOwnPosition() {
+        return false;
     }
 
     /**
@@ -532,6 +547,9 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        if (keepsOwnPosition()) {
+            return;
+        }
 
         // enforce contained is within screen
         BaseDragLayer dragLayer = getPopupContainer();

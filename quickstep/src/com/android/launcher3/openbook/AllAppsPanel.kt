@@ -8,11 +8,9 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ColorFilter
 import android.graphics.Outline
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.Rect
@@ -23,7 +21,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
 import android.util.Log
 import android.util.TypedValue
-import android.view.CrossWindowBlurListeners
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -46,8 +43,7 @@ import com.android.launcher3.Utilities
 import com.android.launcher3.allapps.ActivityAllAppsContainerView
 import com.android.launcher3.allapps.AllAppsStore
 import com.android.launcher3.taskbar.overlay.TaskbarOverlayContext
-import java.util.concurrent.Executor
-import java.util.function.Consumer
+import com.android.launcher3.views.ActivityContext
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -105,7 +101,7 @@ class AllAppsPanel private constructor(
     val closeDurationMs = res.getInteger(R.integer.ob_duration_exit_ms)
     val closeInterpolator: Interpolator = EMPHASIZED_ACCELERATE
 
-    private val glass = PanelGlass(appsView)
+    private val glass = GlassDrawable(appsView, GlassDrawable.Shadow.PANEL, "panel", TAG)
     private val insets = Rect()
     private var panelHeight = 0
     private var heightLocked = false
@@ -291,6 +287,17 @@ class AllAppsPanel private constructor(
      * whose reset of the search also took the field's focus away.
      */
     fun onKeyPreIme(event: KeyEvent): Boolean {
+        if (OpenBookMenu.isMenuKey(event)) {
+            // Shift+F10 or the menu key on a focused cell: its menu, from the keyboard (design §4).
+            val cell = appsView.findFocus() as? BubbleTextView ?: return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                ActivityContext.lookupContextNoThrow<TaskbarOverlayContext>(context)?.let { overlay ->
+                    OpenBookMenu.openFromKeyboard { overlay.showPopupMenuForIcon(cell) }
+                    Log.d(TAG, "menu key: ${cell.text}")
+                }
+            }
+            return true
+        }
         if (event.keyCode != KeyEvent.KEYCODE_ESCAPE || !event.hasNoModifiers()) return false
         if (event.action == KeyEvent.ACTION_UP) return escapeDown.also { escapeDown = false }
         if (event.action != KeyEvent.ACTION_DOWN) return false
@@ -369,7 +376,7 @@ class AllAppsPanel private constructor(
 
     private fun setAlpha(alpha: Float) {
         appsView.alpha = alpha
-        glass.panelAlpha = alpha // the blur region doesn't follow the view's alpha
+        glass.surfaceAlpha = alpha // the blur region doesn't follow the view's alpha
     }
 
     /** When an animation's frames came: how many, over how long, and the longest gap (for the log). */
@@ -387,135 +394,6 @@ class AllAppsPanel private constructor(
         }
 
         fun span() = last - first
-    }
-
-    /** The glass: shadow, the platform's blur behind the panel, the tint, the outline and the lit top edge. */
-    private class PanelGlass(private val view: View) : Drawable() {
-        private val res = view.resources
-        private val dark = Utilities.isDarkTheme(view.context)
-        private val tint = view.context.getColor(
-            if (dark) R.color.materialColorSurfaceContainer else R.color.materialColorSurface
-        )
-        private val glassAlpha = res.getFloat(R.dimen.ob_glass_alpha)
-        private val solidAlpha = res.getFloat(R.dimen.ob_glass_solid_alpha)
-        private val blurRadius = res.getDimensionPixelSize(R.dimen.ob_glass_blur)
-        private val edge = res.getDimension(R.dimen.ob_glass_edge)
-        private val litEdge = ColorUtils.setAlphaComponent(Color.WHITE, if (dark) 46 else 191) // 18 %, 75 %
-        private val outline = ColorUtils.setAlphaComponent(Color.WHITE, if (dark) 36 else 140) // 14 %, 55 %
-        private val keyShadow = if (dark) Color.argb(140, 0, 0, 0) else Color.argb(56, 0x1B, 0x1B, 0x21) // 55 %, 22 %
-        private val ambientShadow = if (dark) Color.argb(77, 0, 0, 0) else Color.argb(20, 0x1B, 0x1B, 0x21) // 30, 8
-        private val keyY = res.getDimension(R.dimen.ob_shadow_key_y)
-        private val keyBlur = res.getDimension(R.dimen.ob_shadow_key_blur)
-        private val ambientY = res.getDimension(R.dimen.ob_shadow_ambient_y)
-        private val ambientBlur = res.getDimension(R.dimen.ob_shadow_ambient_blur)
-
-        var radius = 0f
-        var panelAlpha = 1f
-            set(v) {
-                field = v
-                invalidateSelf()
-            }
-
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val rect = RectF()
-        private val path = Path()
-
-        private var blurEnabled = CrossWindowBlurListeners.getInstance().isCrossWindowBlurEnabled
-        private var blur: BackgroundBlurDrawable? = null
-        private var blurUnavailable = false
-        private val onView = Executor { r -> view.post(r) }
-        private val blurListener = Consumer<Boolean> { enabled ->
-            if (enabled != blurEnabled) {
-                blurEnabled = enabled
-                Log.d(TAG, "platform blur ${if (enabled) "on" else "off"}")
-                invalidateSelf()
-            }
-        }
-
-        init {
-            view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {
-                    CrossWindowBlurListeners.getInstance().addListener(onView, blurListener)
-                }
-
-                override fun onViewDetachedFromWindow(v: View) {
-                    CrossWindowBlurListeners.getInstance().removeListener(blurListener)
-                    blur = null
-                }
-            })
-        }
-
-        override fun draw(canvas: Canvas) {
-            val b = bounds
-            if (b.isEmpty) return
-            rect.set(b)
-            path.reset()
-            path.addRoundRect(rect, radius, radius, Path.Direction.CW)
-
-            // Shadows outside the panel only, so they don't darken the glass.
-            canvas.save()
-            canvas.clipOutPath(path)
-            shadow(canvas, ambientY, ambientBlur, ambientShadow)
-            shadow(canvas, keyY, keyBlur, keyShadow)
-            canvas.restore()
-
-            val blurDrawable = if (blurEnabled) blurDrawable() else null
-            if (blurDrawable != null) {
-                blurDrawable.setBounds(b)
-                blurDrawable.alpha = (255 * panelAlpha).roundToInt()
-                blurDrawable.draw(canvas)
-            }
-            paint.style = Paint.Style.FILL
-            paint.color = ColorUtils.setAlphaComponent(
-                tint, (255 * if (blurDrawable != null) glassAlpha else solidAlpha).roundToInt()
-            )
-            canvas.drawPath(path, paint)
-
-            // A 1 dp outline inside the edge, and the lit edge along the top.
-            canvas.save()
-            canvas.clipPath(path)
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = edge * 2 // half of it falls outside the clip
-            paint.color = outline
-            canvas.drawPath(path, paint)
-            canvas.clipRect(rect.left, rect.top, rect.right, rect.top + radius)
-            paint.color = litEdge
-            canvas.drawPath(path, paint)
-            canvas.restore()
-            paint.style = Paint.Style.FILL
-        }
-
-        /** A CSS-style box shadow (offset [dy], blur [blur]) of the panel's shape. */
-        private fun shadow(canvas: Canvas, dy: Float, blur: Float, color: Int) {
-            // Skia's sigma for a radius r is 0.57735 r + 0.5; a CSS blur b has sigma b / 2.
-            val r = ((blur / 2f) - 0.5f) / 0.57735f
-            shadowPaint.color = Color.BLACK
-            shadowPaint.setShadowLayer(r, 0f, dy, color)
-            canvas.drawPath(path, shadowPaint)
-        }
-
-        private fun blurDrawable(): BackgroundBlurDrawable? {
-            blur?.let { return it }
-            if (blurUnavailable) return null
-            val vri = view.viewRootImpl ?: return null
-            val b = vri.createBackgroundBlurDrawable()
-            if (b == null) {
-                blurUnavailable = true
-                Log.w(TAG, "no background blur for the All Apps window: tint only")
-                return null
-            }
-            b.setBlurRadius(blurRadius)
-            b.setCornerRadius(radius)
-            blur = b
-            Log.d(TAG, "panel glass: background blur $blurRadius px")
-            return b
-        }
-
-        override fun setAlpha(alpha: Int) {}
-        override fun setColorFilter(colorFilter: ColorFilter?) {}
-        @Deprecated("Deprecated in Java")
-        override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
 
     /** The field's paper pill, with the 2 dp `primary` ring while it has focus. */

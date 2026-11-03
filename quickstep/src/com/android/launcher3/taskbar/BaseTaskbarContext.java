@@ -34,6 +34,8 @@ import androidx.lifecycle.LifecycleRegistry;
 
 import com.android.launcher3.LifecycleTracker;
 import com.android.launcher3.dagger.LauncherComponentProvider;
+import com.android.launcher3.openbook.GlassDrawable;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.popup.SystemShortcut;
 import com.android.launcher3.taskbar.bubbles.BubbleActivityStarter;
 import com.android.launcher3.util.BaseContext;
@@ -48,7 +50,7 @@ import java.util.concurrent.Executor;
 // TODO(b/218912746): Share more behavior to avoid all apps context depending directly on taskbar.
 /** Base for common behavior between taskbar window contexts. */
 public abstract class BaseTaskbarContext extends BaseContext
-        implements SystemShortcut.TaskbarBubbleActivityStarter {
+        implements SystemShortcut.TaskbarBubbleActivityStarter, OpenBookMenu.GlassHost {
 
     private final int mDisplayId;
     private final boolean mIsPrimaryDisplay;
@@ -199,4 +201,10 @@ public abstract class BaseTaskbarContext extends BaseContext
      * or AllApps.
      */
     public abstract void onSplitScreenMenuButtonClicked();
+
+    /** OpenBook: a menu's glass, the platform's blur behind it (openbook/OpenBookMenu). */
+    @Override
+    public OpenBookMenu.Glass createMenuGlass(View view) {
+        return GlassDrawable.forMenu(view);
+    }
 }

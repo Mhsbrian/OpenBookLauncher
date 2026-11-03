@@ -158,11 +158,32 @@ class OpenBookTaskbar(
         Log.d(TAG, "keyboard focus into the taskbar (${if (forward) "first" else "last"} target, focused $focused)")
     }
 
+    /** The task WM Shell reports in front, or -1 (openbook/TaskbarMenu marks its window). */
+    val frontTask: Int
+        get() = frontTaskId
+
     private fun onKeyEvent(event: KeyEvent): Boolean {
+        if (keyboardFocus && OpenBookMenu.isMenuKey(event)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) openMenuFromKeyboard()
+            return true
+        }
         if (!keyboardFocus || event.action != KeyEvent.ACTION_DOWN || !event.hasNoModifiers()) return false
         if (event.keyCode != KeyEvent.KEYCODE_ESCAPE && event.keyCode != KeyEvent.KEYCODE_BACK) return false
         leaveKeyboardFocus("Esc")
         return true
+    }
+
+    /** Shift+F10 or the menu key on a focused app target: its menu, from the keyboard (design §4). */
+    private fun openMenuFromKeyboard() {
+        val target = taskbarView.findFocus() as? BubbleTextView
+        if (target == null || target === taskbarView.allAppsButtonContainer ||
+            target === taskbarView.taskbarDividerViewContainer || !isOnBar(target)
+        ) {
+            Log.d(TAG, "menu key: no app target focused")
+            return
+        }
+        val popup = OpenBookMenu.openFromKeyboard { controllers.taskbarPopupController.show(target) }
+        Log.d(TAG, "menu key: ${target.contentDescription ?: target.text} menu ${if (popup != null) "open" else "none"}")
     }
 
     private fun onWindowFocusChanged(hasFocus: Boolean) {

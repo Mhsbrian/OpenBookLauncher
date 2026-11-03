@@ -45,6 +45,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.InsettableFrameLayout;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.dragndrop.DragController;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.testing.shared.ResourceUtils;
 import com.android.launcher3.util.MultiPropertyFactory.MultiProperty;
 import com.android.launcher3.util.MultiValueAlpha;
@@ -302,6 +303,7 @@ public abstract class BaseDragLayer<T extends Context & ActivityContext>
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        OpenBookMenu.onTouchEvent(ev); // where a right-click's menu opens
         switch (ev.getAction()) {
             case ACTION_DOWN: {
                 if ((mTouchDispatchState & TOUCH_DISPATCHING_TO_VIEW_IN_PROGRESS) != 0) {

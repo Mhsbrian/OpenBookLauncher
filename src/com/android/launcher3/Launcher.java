@@ -191,6 +191,7 @@ import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.LauncherAppWidgetInfo;
 import com.android.launcher3.model.data.PredictedContainerInfo;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.openbook.OpenBookMenu;
 import com.android.launcher3.pm.PinRequestHelper;
 import com.android.launcher3.popup.PopupContainer;
 import com.android.launcher3.popup.PopupController;
@@ -2413,11 +2414,15 @@ public class Launcher extends StatefulActivity<LauncherState>
         Rect pos = new Rect();
         pos.offsetTo((int) x, (int) y);
         pos.inset(-20, -20);
+        // OpenBook (openbook/OpenBookMenu): the desk's menu, in design §4's order, at the pointer.
+        boolean openBook = OpenBookMenu.isEnabled(this);
         PopupContainer.Companion.showForMenuItems(
                 this,
                 getRootView(),
-                WorkspaceLongPressOptions.getAll(this),
-                pos
+                openBook ? OpenBookMenu.desktopItems(WorkspaceLongPressOptions.getAll(this))
+                        : WorkspaceLongPressOptions.getAll(this),
+                pos,
+                openBook ? OpenBookMenu.desktop(x, y) : null
         );
     }
 
