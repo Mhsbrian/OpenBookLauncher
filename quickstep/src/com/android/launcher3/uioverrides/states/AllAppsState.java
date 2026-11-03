@@ -27,6 +27,7 @@ import com.android.launcher3.Launcher;
 import com.android.launcher3.LauncherState;
 import com.android.launcher3.LauncherUiState;
 import com.android.launcher3.R;
+import com.android.launcher3.openbook.AllAppsPanel;
 import com.android.launcher3.util.Themes;
 import com.android.launcher3.views.ActivityContext;
 import com.android.launcher3.views.ScrimColors;
@@ -50,6 +51,11 @@ public class AllAppsState extends LauncherState {
 
     @Override
     public int getTransitionDuration(ActivityContext context, boolean isToState) {
+        // OpenBook (openbook/AllAppsPanel): on a desk, as long as the All Apps panel's own motion.
+        Integer openBook = AllAppsPanel.stateTransitionMs(context.asContext(), isToState);
+        if (openBook != null) {
+            return openBook;
+        }
         if (Flags.allAppsSurface() && !isToState) {
             // TODO(b/414847564): Temporary workaround for no state transition during the swipe.
             return 100;

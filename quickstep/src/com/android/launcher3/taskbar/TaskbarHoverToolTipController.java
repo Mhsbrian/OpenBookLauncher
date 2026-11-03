@@ -84,8 +84,11 @@ public class TaskbarHoverToolTipController implements View.OnHoverListener {
         AnimatorSet hoverOpenAnimator = new AnimatorSet();
         ObjectAnimator alphaOpenAnimator = ObjectAnimator.ofFloat(mHoverToolTipView, ALPHA, 0f, 1f);
         hoverOpenAnimator.play(alphaOpenAnimator);
-        hoverOpenAnimator.setDuration(mOpenBook ? OpenBookTaskbar.tooltipFadeMs(activity)
-                : HOVER_TOOL_TIP_REVEAL_DURATION);
+        if (mOpenBook) {
+            OpenBookTaskbar.tooltipFade(alphaOpenAnimator); // OpenBook: duration.fade (openbook/OpenBookMotion)
+        } else {
+            hoverOpenAnimator.setDuration(HOVER_TOOL_TIP_REVEAL_DURATION);
+        }
         mHoverToolTipView.setCustomOpenAnimation(hoverOpenAnimator);
 
         mHoverToolTipView.addOnLayoutChangeListener(

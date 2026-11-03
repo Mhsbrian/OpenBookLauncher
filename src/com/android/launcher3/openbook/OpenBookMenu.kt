@@ -6,8 +6,6 @@ package com.android.launcher3.openbook
 
 import android.animation.Animator
 import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -29,8 +27,6 @@ import android.view.WindowManager
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.graphics.ColorUtils
-import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
-import com.android.app.animation.Interpolators.LINEAR
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
@@ -67,8 +63,9 @@ import kotlin.math.roundToInt
  *   over the icon, 8 dp above the bar. No arrow.
  * - **Keyboard:** Shift+F10 or the menu key opens the focused item's menu ([isMenuKey]); ↑ ↓ (and Tab) move, wrapping;
  *   Enter activates; Esc closes.
- * - **Motion:** opens from 0.94 about the anchor's corner with a fade, 150 ms emphasised decelerate; closes with a
- *   100 ms fade. Remove animations makes both cuts.
+ * - **Motion** ([OpenBookMotion], design §7): opens from 0.94 about the anchor's corner, the scale on `spring.panel`
+ *   and the opacity on `duration.fade`; closes with a 100 ms fade on `duration.exit`'s curve. Remove animations makes
+ *   both cuts.
  *
  * [styleViewPopup] gives AOSP's view popups (`ArrowPopup`: a taskbar folder's menu, for one) the same glass, rows and
  * no arrow.
@@ -497,21 +494,11 @@ object OpenBookMenu {
             return true
         }
 
-        /** Opening: 0.94 → 1 about the anchor's corner and a fade, 150 ms emphasised decelerate. */
+        /** Opening ([menuOpenAnimator]) about the anchor's corner. */
         fun openAnimator(): Animator {
             popup.pivotX = pivotX
             popup.pivotY = pivotY
-            val fade = ValueAnimator.ofFloat(0f, 1f).apply { addUpdateListener { setAlpha(it.animatedValue as Float) } }
-            fade.interpolator = LINEAR
-            val scaleX = ObjectAnimator.ofFloat(popup, View.SCALE_X, t.openScale, 1f)
-            val scaleY = ObjectAnimator.ofFloat(popup, View.SCALE_Y, t.openScale, 1f)
-            scaleX.interpolator = EMPHASIZED_DECELERATE
-            scaleY.interpolator = EMPHASIZED_DECELERATE
-            setAlpha(0f)
-            return AnimatorSet().apply {
-                playTogether(fade, scaleX, scaleY)
-                duration = t.openMs
-            }
+            return menuOpenAnimator(popup, t.openScale) { setAlpha(it) }
         }
 
         /** Logs how long the open or close took, from [startMs] (`SystemClock.uptimeMillis`): Remove animations cuts. */
@@ -519,15 +506,8 @@ object OpenBookMenu {
             Log.d(TAG, "menu $what: ${android.os.SystemClock.uptimeMillis() - startMs} ms")
         }
 
-        /** Closing: a 100 ms fade. */
-        fun closeAnimator(): Animator {
-            val from = popup.alpha
-            return ValueAnimator.ofFloat(from, 0f).apply {
-                addUpdateListener { setAlpha(it.animatedValue as Float) }
-                interpolator = LINEAR
-                duration = t.closeMs
-            }
-        }
+        /** Closing ([menuCloseAnimator]). */
+        fun closeAnimator(): Animator = menuCloseAnimator(popup) { setAlpha(it) }
 
         private fun setAlpha(a: Float) {
             popup.alpha = a
@@ -550,6 +530,42 @@ object OpenBookMenu {
         }
     }
 
+    // ---- Motion (design §7, OpenBookMotion) ----
+
+    /**
+     * A menu opening: [openScale] → 1 about the view's pivot on `spring.panel`, its opacity 0 → 1 on `duration.fade`.
+     * [setAlpha] sets the view's opacity and its glass's. With Remove animations both end at once.
+     */
+    private fun menuOpenAnimator(popup: View, openScale: Float, setAlpha: (Float) -> Unit): AnimatorSet {
+        setAlpha(0f)
+        popup.scaleX = openScale
+        popup.scaleY = openScale
+        val scale = OpenBookMotion.PANEL.animator(popup.context, openScale, 1f) {
+            popup.scaleX = it
+            popup.scaleY = it
+        }
+        return AnimatorSet().apply { playTogether(scale, OpenBookMotion.FADE.animator(0f, 1f, setAlpha)) }
+    }
+
+    /** A menu closing: its opacity to 0 in 100 ms on `duration.exit`'s curve. */
+    private fun menuCloseAnimator(popup: View, setAlpha: (Float) -> Unit): AnimatorSet =
+        AnimatorSet().apply { play(OpenBookMotion.EXIT_MENU.animator(popup.alpha, 0f, setAlpha)) }
+
+    /** A view popup styled by [styleViewPopup] opening, as a menu does, about the pivot `ArrowPopup` set. */
+    @JvmStatic
+    fun viewPopupOpenAnimator(popup: ViewGroup): AnimatorSet =
+        menuOpenAnimator(popup, Tokens(popup.context).openScale) { setViewPopupAlpha(popup, it) }
+
+    /** A view popup styled by [styleViewPopup] closing, as a menu does. */
+    @JvmStatic
+    fun viewPopupCloseAnimator(popup: ViewGroup): AnimatorSet =
+        menuCloseAnimator(popup) { setViewPopupAlpha(popup, it) }
+
+    private fun setViewPopupAlpha(popup: View, a: Float) {
+        popup.alpha = a
+        (popup.getTag(R.id.openbook_menu_glass) as? Glass)?.surfaceAlpha = a
+    }
+
     // ---- AOSP's view popups (ArrowPopup) ----
 
     /**
@@ -562,6 +578,7 @@ object OpenBookMenu {
         if (!isEnabled(context)) return false
         val t = Tokens(context, openedByTouch(false))
         val glass = (hostOf(context) as? GlassHost)?.createMenuGlass(popup)
+        popup.setTag(R.id.openbook_menu_glass, glass)
         if (glass != null) {
             glass.radius = t.radius
             popup.background = glass.drawable
@@ -639,8 +656,8 @@ object OpenBookMenu {
             addState(intArrayOf(android.R.attr.state_focused), layer(0f, true))
             addState(intArrayOf(android.R.attr.state_hovered), layer(0.08f, false))
             addState(intArrayOf(), layer(0f, false))
-            setEnterFadeDuration(t.hoverInMs)
-            setExitFadeDuration(t.hoverOutMs)
+            setEnterFadeDuration(OpenBookMotion.HOVER_IN.ms.toInt())
+            setExitFadeDuration(OpenBookMotion.HOVER_OUT.ms.toInt())
         }
     }
 
@@ -659,10 +676,6 @@ object OpenBookMenu {
         val text = res.getDimension(R.dimen.ob_mn_text)
         val ring = res.getDimensionPixelSize(R.dimen.ob_focus_ring)
         val openScale = res.getFloat(R.dimen.ob_mn_open_scale)
-        val openMs = res.getInteger(R.integer.ob_mn_open_ms).toLong()
-        val closeMs = res.getInteger(R.integer.ob_mn_close_ms).toLong()
-        val hoverInMs = res.getInteger(R.integer.ob_duration_hover_in_ms)
-        val hoverOutMs = res.getInteger(R.integer.ob_duration_hover_out_ms)
         val solidAlpha = res.getFloat(R.dimen.ob_glass_solid_alpha)
         val typeface: Typeface =
             Typeface.create(Typeface.create(FAMILY, Typeface.NORMAL), res.getInteger(R.integer.ob_mn_weight), false)

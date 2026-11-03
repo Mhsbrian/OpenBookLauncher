@@ -581,14 +581,20 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
 
     protected void animateOpen() {
         setVisibility(View.VISIBLE);
-        mOpenCloseAnimator = getOpenCloseAnimator(
-                        true,
-                        OPEN_DURATION_U,
-                        OPEN_FADE_START_DELAY_U,
-                        OPEN_FADE_DURATION_U,
-                        OPEN_CHILD_FADE_START_DELAY_U,
-                        OPEN_CHILD_FADE_DURATION_U,
-                        EMPHASIZED_DECELERATE);
+        if (mOpenBookStyled) {
+            // OpenBook (openbook/OpenBookMenu): a desk's view popup opens like its menus, on the shared motion tokens.
+            setPivotForOpenCloseAnimation();
+            mOpenCloseAnimator = OpenBookMenu.viewPopupOpenAnimator(this);
+        } else {
+            mOpenCloseAnimator = getOpenCloseAnimator(
+                            true,
+                            OPEN_DURATION_U,
+                            OPEN_FADE_START_DELAY_U,
+                            OPEN_FADE_DURATION_U,
+                            OPEN_CHILD_FADE_START_DELAY_U,
+                            OPEN_CHILD_FADE_DURATION_U,
+                            EMPHASIZED_DECELERATE);
+        }
 
         onCreateOpenAnimation(mOpenCloseAnimator);
         mOpenCloseAnimator.addListener(new AnimatorListenerAdapter() {
@@ -641,7 +647,9 @@ public abstract class ArrowPopup<T extends ActivityContext> extends AbstractFloa
         }
         mIsOpen = false;
 
-        mOpenCloseAnimator = getOpenCloseAnimator(
+        // OpenBook (openbook/OpenBookMenu): a desk's view popup closes like its menus.
+        mOpenCloseAnimator = mOpenBookStyled ? OpenBookMenu.viewPopupCloseAnimator(this)
+                : getOpenCloseAnimator(
                         false,
                         CLOSE_DURATION_U,
                         CLOSE_FADE_START_DELAY_U,

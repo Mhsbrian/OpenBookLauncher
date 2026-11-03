@@ -4,7 +4,6 @@
  */
 package com.android.launcher3.openbook
 
-import android.animation.ValueAnimator
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
@@ -32,9 +31,6 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
-import com.android.internal.dynamicanimation.animation.FloatValueHolder
-import com.android.internal.dynamicanimation.animation.SpringAnimation
-import com.android.internal.dynamicanimation.animation.SpringForce
 import com.android.launcher3.DeviceProfile
 import com.android.launcher3.Launcher
 import com.android.launcher3.LauncherState
@@ -68,6 +64,9 @@ import kotlin.math.roundToInt
  */
 object OverviewDesks {
     const val TAG = "OverviewDesks"
+
+    /** The hover lift's spring comes to rest within half a pixel. */
+    private const val LIFT_VISIBLE_CHANGE = 0.5f
 
     /** Whether [context]'s launcher draws OpenBook's Overview for desks. */
     @JvmStatic
@@ -364,15 +363,14 @@ object OverviewDesks {
         private val outline = ColorUtils.setAlphaComponent(Color.WHITE, if (dark) 36 else 140) // 14 %, 55 %
         private val ringOuter = view.context.getColor(R.color.materialColorSurfaceContainerLowest)
         private val ringMiddle = view.context.getColor(R.color.materialColorOnPrimaryContainer)
-        private val stiffness = res.getFloat(R.dimen.ob_spring_settle_stiffness)
-        private val damping = res.getFloat(R.dimen.ob_spring_settle_damping)
 
         private val rect = Rect()
         private val rectF = RectF()
         private val path = Path()
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private var spring: SpringAnimation? = null
+        /** The lift on `spring.settle` (OpenBookMotion), to within half a pixel. */
+        private val lifting = OpenBookMotion.Value(0f) { setLift(it) }
 
         /** The hover lift, px (0 or up to -4 dp): TaskView adds it to its translationY. */
         var lift = 0f
@@ -399,29 +397,18 @@ object OverviewDesks {
 
         /** Down from the hover lift at once: the tile is leaving Overview (fullscreen progress), or recycled. */
         fun rest() {
-            spring?.cancel()
             resting = true
             hovered = false
             resting = false
-            if (lift != 0f) setLift(0f)
+            if (lifting.value != 0f || lifting.target != 0f) lifting.snap(0f)
         }
 
         private var resting = false
 
+        /** A cut while resting, off screen or with Remove animations; a spring in flight is retargeted. */
         private fun springTo(to: Float) {
-            if (resting || !ValueAnimator.areAnimatorsEnabled() || !view.isAttachedToWindow) {
-                spring?.cancel()
-                setLift(to)
-                return
-            }
-            val s = spring ?: SpringAnimation(FloatValueHolder()).also { s ->
-                s.spring = SpringForce(to).setStiffness(stiffness).setDampingRatio(damping)
-                s.setMinimumVisibleChange(0.5f)
-                s.addUpdateListener { _, v, _ -> setLift(v) }
-                spring = s
-            }
-            if (!s.isRunning) s.setStartValue(lift)
-            s.animateToFinalPosition(to)
+            val animate = !resting && view.isAttachedToWindow
+            lifting.spring(to, OpenBookMotion.SETTLE, LIFT_VISIBLE_CHANGE, animate)
         }
 
         private fun setLift(v: Float) {

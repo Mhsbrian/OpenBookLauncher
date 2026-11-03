@@ -144,15 +144,13 @@
     <!-- The menu's shadow (§4): 0 12 32, lighter than a panel's; the ambient layer is the panels' 0 2 6. -->
     <dimen name="ob_mn_shadow_key_y">12dp</dimen>
     <dimen name="ob_mn_shadow_key_blur">32dp</dimen>
-    <!-- §4 Motion: open scales from 0.94 about the anchor's corner with a fade, 150 ms emphasised decelerate;
-         close fades in 100 ms. -->
+    <!-- §4 Motion: open scales from 0.94 about the anchor's corner on spring.panel with a fade on duration.fade;
+         close fades in 100 ms on duration.exit's curve. -->
     <item name="ob_mn_open_scale" format="float" type="dimen">0.94</item>
-    <integer name="ob_mn_open_ms">150</integer>
-    <integer name="ob_mn_close_ms">100</integer>
 
     <!-- §5.2 Overview for desks. The backdrop: the glass blur (ob_glass_blur) under `surface` at 18 % (light) or
          30 % (dark). Tiles: 20 dp corners for a desk, 16 dp for an app; a 1 dp lit outline (the glass outline) and a
-         soft shadow, 0 16 40 at 20 % black; hover lifts a tile 4 dp on spring.settle with a deeper shadow, 0 24 56 at
+         soft shadow, 0 16 40 at 20 % black; hover lifts a tile 4 dp on spring.settle (OpenBookMotion) with a deeper shadow, 0 24 56 at
          26 %; keyboard focus is a two-colour ring outside the edge, three 2 dp bands (surfaceContainerLowest,
          onPrimaryContainer, surfaceContainerLowest; WCAG technique C40). Clear all: a 40 dp glass chip, its bottom
          40 dp above the taskbar, an 18 dp glyph 8 dp before "Clear all" at 14/20 and weight 500, padding 14 and 18. -->
@@ -189,21 +187,12 @@
     <dimen name="ob_ov_label_line">18sp</dimen>
     <integer name="ob_ov_label_weight">500</integer>
 
-    <!-- §7 Motion. Springs: stiffness, damping ratio. Durations in ms. -->
-    <item name="ob_spring_panel_stiffness" format="float" type="dimen">500</item>
-    <item name="ob_spring_panel_damping" format="float" type="dimen">0.90</item>
-    <integer name="ob_duration_exit_ms">150</integer>
-    <item name="ob_spring_settle_stiffness" format="float" type="dimen">700</item>
-    <item name="ob_spring_settle_damping" format="float" type="dimen">0.90</item>
-    <item name="ob_spring_tick_stiffness" format="float" type="dimen">1400</item>
-    <item name="ob_spring_tick_damping" format="float" type="dimen">0.70</item>
-    <integer name="ob_duration_fade_ms">120</integer>
-    <integer name="ob_duration_hover_in_ms">100</integer>
-    <integer name="ob_duration_hover_out_ms">150</integer>
+    <!-- §7 Motion: the springs and durations are code, openbook/OpenBookMotion, shared with Quire's Motion. -->
 
     <item type="id" name="openbook_taskbar_icon_state" />
     <item type="id" name="openbook_allapps_cell_state" />
     <item type="id" name="openbook_clear_all_chip" />
+    <item type="id" name="openbook_menu_glass" />
 
     <!-- §3.3 Our own wording; English only, like the rest of OpenBook's strings here. -->
     <string name="ob_aa_no_results" translatable="false">No apps match “%1$s”</string>
