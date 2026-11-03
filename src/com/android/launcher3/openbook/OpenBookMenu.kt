@@ -123,7 +123,8 @@ object OpenBookMenu {
         val hint: (PopupItem) -> String? = { null },
     ) {
         override fun toString() =
-            "$kind ${anchor} keyboard=$byKeyboard touch=$byTouch header=${header?.title} windows=${windows.size}"
+            "$kind $anchor keyboard=$byKeyboard touch=$byTouch header=${header?.title} " +
+                "windows=${windows.size}${windows.joinToString(",", " [", "]") { (if (it.front) "*" else "") + it.title }}"
     }
 
     @JvmStatic
@@ -443,6 +444,11 @@ object OpenBookMenu {
             }
         }
 
+        /** Logs how long the open or close took, from [startMs] (`SystemClock.uptimeMillis`): Remove animations cuts. */
+        fun logMotion(what: String, startMs: Long) {
+            Log.d(TAG, "menu $what: ${android.os.SystemClock.uptimeMillis() - startMs} ms")
+        }
+
         /** Closing: a 100 ms fade. */
         fun closeAnimator(): Animator {
             val from = popup.alpha
@@ -521,6 +527,9 @@ object OpenBookMenu {
                 child.bubbleText?.let { text ->
                     text.background = rowBackground(t)
                     text.minHeight = t.row
+                    // 12 dp side, the 20 dp icon and a 12 dp gap before the label, as in the Compose menu.
+                    text.setPaddingRelative(t.rowPadding + t.icon + t.iconGap, text.paddingTop, t.rowPadding,
+                        text.paddingBottom)
                     text.setTextSize(TypedValue.COMPLEX_UNIT_PX, t.text)
                     text.typeface = t.typeface
                     text.setTextColor(t.onSurface)
@@ -529,6 +538,7 @@ object OpenBookMenu {
                     icon.layoutParams?.let {
                         it.width = t.icon
                         it.height = t.icon
+                        (it as? ViewGroup.MarginLayoutParams)?.marginStart = t.rowPadding
                         icon.layoutParams = it
                     }
                     icon.backgroundTintList = ColorStateList.valueOf(t.onSurfaceVariant)
@@ -567,6 +577,8 @@ object OpenBookMenu {
         val barGap = res.getDimensionPixelSize(R.dimen.ob_mn_bar_gap)
         val row = res.getDimensionPixelSize(R.dimen.ob_mn_row)
         val rowRadius = res.getDimension(R.dimen.ob_mn_row_radius)
+        val rowPadding = res.getDimensionPixelSize(R.dimen.ob_mn_row_padding)
+        val iconGap = res.getDimensionPixelSize(R.dimen.ob_mn_icon_gap)
         val icon = res.getDimensionPixelSize(R.dimen.ob_mn_icon)
         val text = res.getDimension(R.dimen.ob_mn_text)
         val ring = res.getDimensionPixelSize(R.dimen.ob_focus_ring)

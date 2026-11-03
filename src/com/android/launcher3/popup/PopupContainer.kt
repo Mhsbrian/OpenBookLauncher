@@ -22,6 +22,7 @@ import android.animation.AnimatorSet
 import android.content.Context
 import android.graphics.PointF
 import android.graphics.Rect
+import android.os.SystemClock
 import android.os.Trace
 import android.view.MotionEvent
 import android.view.View
@@ -300,12 +301,14 @@ open class PopupContainer<T : ActivityContext>(
         val anim = AnimatorSet()
         anim.play(menu.openAnimator())
         mOpenCloseAnimator = anim
+        val start = SystemClock.uptimeMillis()
         anim.addListener(
             object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     alpha = 1f
                     announceAccessibilityChanges()
                     mOpenCloseAnimator = null
+                    menu.logMotion("open", start)
                 }
             }
         )
@@ -322,10 +325,12 @@ open class PopupContainer<T : ActivityContext>(
         anim.play(menu.closeAnimator())
         onCreateCloseAnimation(anim)
         mOpenCloseAnimator = anim
+        val start = SystemClock.uptimeMillis()
         anim.addListener(
             object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     mOpenCloseAnimator = null
+                    menu.logMotion("close", start)
                     if (mDeferContainerRemoval) {
                         visibility = INVISIBLE
                     } else {
