@@ -172,6 +172,8 @@ class AllAppsPanel private constructor(
         val primary = context.getColor(R.color.materialColorPrimary)
         val soft = context.getColor(R.color.materialColorOnSurfaceVariant)
         field.background = FieldDrawable(context)
+        // The field draws its own ring; Android's default focus highlight would grey its rectangle by keyboard.
+        field.defaultFocusHighlightEnabled = false
         (field.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
             it.height = res.getDimensionPixelSize(R.dimen.ob_aa_field_height)
             field.layoutParams = it
@@ -550,6 +552,8 @@ class AllAppsPanel private constructor(
         }
 
         override fun isStateful() = true
+
+        override fun hasFocusStateSpecified() = true
 
         override fun onStateChange(state: IntArray): Boolean {
             val f = state.contains(android.R.attr.state_focused)
