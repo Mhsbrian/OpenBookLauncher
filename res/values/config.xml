@@ -211,6 +211,11 @@
          (pref_add_icon_to_home). Their choice always wins. A desktop overlay sets it to false. -->
     <bool name="pref_add_icon_to_home_default">true</bool>
 
+    <!-- OpenBook: whether app names in All Apps may take two lines (pref_enable_two_line_toggle), false as in AOSP.
+         Launcher3 has no setting for it, so this decides. Two lines show for English only, as in AOSP. A desktop
+         overlay sets it to true. -->
+    <bool name="pref_enable_two_line_toggle_default">false</bool>
+
     <string-array name="grid_control_known_signers" translatable="false" />
 
     <string-array name="supported_overlay_apps" translatable="false"/>

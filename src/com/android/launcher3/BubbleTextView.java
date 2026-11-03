@@ -18,7 +18,6 @@ package com.android.launcher3;
 
 import static android.graphics.fonts.FontStyle.FONT_WEIGHT_BOLD;
 import static android.graphics.fonts.FontStyle.FONT_WEIGHT_NORMAL;
-import static android.text.Layout.Alignment.ALIGN_NORMAL;
 
 import static com.android.launcher3.BubbleTextView.RunningAppState.MINIMIZED;
 import static com.android.launcher3.BubbleTextView.RunningAppState.RUNNING;
@@ -57,7 +56,6 @@ import android.graphics.drawable.Drawable;
 import android.icu.text.MessageFormat;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextUtils.TruncateAt;
@@ -101,6 +99,7 @@ import com.android.launcher3.model.data.AppInfo;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.WorkspaceItemInfo;
+import com.android.launcher3.openbook.TwoLineLabels;
 import com.android.launcher3.popup.IconViewController;
 import com.android.launcher3.popup.Poppable;
 import com.android.launcher3.popup.PoppableType;
@@ -1294,9 +1293,9 @@ public class BubbleTextView extends TextView implements ItemInfoUpdateReceiver,
                                 : EMPTY;
                     }
                     newString.append(NEW_LINE).append(lastCharacters);
-                    StaticLayout staticLayout = new StaticLayout(newString, paint, limitedWidth,
-                            ALIGN_NORMAL, spacingMultiplier, spacingExtra, false);
-                    if (staticLayout.getHeight() < limitedHeight) {
+                    // OpenBook: measure the two lines that show, not the whole rest (TwoLineLabels).
+                    if (TwoLineLabels.fitsTwoLines(newString, paint, limitedWidth, limitedHeight,
+                            spacingMultiplier, spacingExtra)) {
                         return newString.toString();
                     }
                 }

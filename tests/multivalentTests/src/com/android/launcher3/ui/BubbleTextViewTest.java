@@ -358,6 +358,23 @@ public class BubbleTextViewTest {
     }
 
     @Test
+    public void modifyTitleToSupportMultiLine_restLongerThanOneLine_keepsTwoLines() {
+        // OpenBook (TwoLineLabels): "System UWB Field Test" breaks after "System", and the rest takes more than
+        // one line. Room for two lines but not for the whole rest keeps the break; the label ends line 2 in "…".
+        // AOSP measured the whole rest and returned the title on one line.
+        IntArray breakPoints = StringMatcherUtility.getListOfBreakpoints(
+                TEST_LONG_STRING_WITH_SPACE_LONGER_THAN_CHAR_LIMIT, MATCHER);
+        int lineHeight = mBubbleTextView.getPaint().getFontMetricsInt(null);
+        CharSequence newString = BubbleTextView.modifyTitleToSupportMultiLine(mLimitedWidth,
+                lineHeight * 5 / 2,
+                TEST_LONG_STRING_WITH_SPACE_LONGER_THAN_CHAR_LIMIT, mBubbleTextView.getPaint(),
+                breakPoints,
+                SPACE_MULTIPLIER,
+                SPACE_EXTRA);
+        assertEquals(TEST_LONG_STRING_WITH_SPACE_LONGER_THAN_CHAR_LIMIT_RESULT, newString);
+    }
+
+    @Test
     public void modifyTitleToSupportMultiLine_TEST_LONG_STRING_SYMBOL_LONGER_THAN_CHAR_LIMIT() {
         // test string: "LEGO®Builder"
         IntArray breakPoints = StringMatcherUtility.getListOfBreakpoints(
