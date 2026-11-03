@@ -65,6 +65,8 @@ class AllAppsPanelCells(context: Context) {
         val side = ((t.column - t.labelWidth) / 2f).roundToInt()
         icon.setPadding(side, t.iconTop, side, 0)
         icon.setTextSize(TypedValue.COMPLEX_UNIT_PX, t.labelText)
+        // The label's two 16 dp lines fill the cell to its bottom: no extra font padding above the first.
+        icon.includeFontPadding = false
         icon.setLineHeight(t.labelLine)
         icon.typeface = Typeface.create(icon.typeface, t.labelWeight, false)
         icon.setTaskbarIconDecor(decor)

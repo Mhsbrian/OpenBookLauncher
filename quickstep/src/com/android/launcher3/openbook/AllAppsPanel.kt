@@ -195,6 +195,7 @@ class AllAppsPanel private constructor(
             setSize(res.getDimensionPixelSize(R.dimen.ob_focus_ring), 1)
         }
         field.highlightColor = ColorUtils.setAlphaComponent(primary, 0x40)
+        field.setOnFocusChangeListener { _, has -> if (!has) Log.d(TAG, "DEBUG field lost focus", Throwable()) }
         // ↓ goes into the grid (Tab already does); the field otherwise keeps the arrows for its text.
         field.setOnKeyListener { _, code, event ->
             code == KeyEvent.KEYCODE_DPAD_DOWN && event.hasNoModifiers() &&
