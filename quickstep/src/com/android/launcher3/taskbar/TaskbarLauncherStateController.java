@@ -59,6 +59,7 @@ import com.android.launcher3.QuickstepTransitionManager;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.anim.AnimatedFloat;
 import com.android.launcher3.anim.AnimatorListeners;
+import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.statemanager.StateManager;
 import com.android.launcher3.taskbar.bubbles.stashing.BubbleStashController.BubbleLauncherState;
 import com.android.launcher3.util.MultiPropertyFactory.MultiProperty;
@@ -231,8 +232,8 @@ public class TaskbarLauncherStateController {
                 public void onStateTransitionStart(LauncherState toState) {
                     Preconditions.assertTaskbarUiThread();
                     if (Flags.allAppsSurface() && toState == LauncherState.ALL_APPS) {
-                        mControllers.taskbarAllAppsController.show(
-                                /* animate = */ false, /* showKeyboard = */ false);
+                        mControllers.taskbarAllAppsController.show(/* animate = */ false,
+                                /* showKeyboard = */ TypeToSearch.takeOpenRequest()); // OpenBook
                     }
                     if (toState != mLauncherState) {
                         // Treat FLAG_LAUNCHER_IN_STATE_TRANSITION as a changed flag even if a

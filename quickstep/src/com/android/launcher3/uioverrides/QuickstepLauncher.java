@@ -150,6 +150,7 @@ import com.android.launcher3.model.WellbeingModel;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.ItemInfoWithIcon;
 import com.android.launcher3.model.data.PredictedContainerInfo;
+import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.popup.SystemShortcut;
 import com.android.launcher3.proxy.ProxyActivityStarter;
 import com.android.launcher3.statehandlers.DesktopVisibilityController;
@@ -880,6 +881,11 @@ public class QuickstepLauncher extends Launcher implements RecentsViewContainer,
         if (ti != null) {
             ti.onStateTransitionCompletedAfterSwipeToHome(finalState);
         }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        return TypeToSearch.onKeyDown(this, event) || super.onKeyDown(keyCode, event); // OpenBook
     }
 
     @Override
