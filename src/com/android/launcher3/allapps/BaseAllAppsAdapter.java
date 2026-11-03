@@ -42,6 +42,7 @@ import com.android.launcher3.BubbleTextView;
 import com.android.launcher3.R;
 import com.android.launcher3.allapps.search.SearchAdapterProvider;
 import com.android.launcher3.model.data.AppInfo;
+import com.android.launcher3.openbook.AllAppsPanelCells;
 import com.android.launcher3.popup.PopupContainerWithArrow;
 import com.android.launcher3.touch.CustomActionsListener;
 import com.android.launcher3.views.ActivityContext;
@@ -315,7 +316,8 @@ public abstract class BaseAllAppsAdapter
             }
             case VIEW_TYPE_EMPTY_SEARCH: {
                 AppInfo info = mApps.getAdapterItems().get(position).itemInfo;
-                if (info != null) {
+                if (info != null && !AllAppsPanelCells.bindNoResults( // OpenBook: the panel's own
+                        mActivityContext, (TextView) holder.itemView, info.title)) {
                     ((TextView) holder.itemView).setText(mActivityContext.asContext().getString(
                             R.string.all_apps_no_search_results, info.title));
                 }
@@ -369,6 +371,7 @@ public abstract class BaseAllAppsAdapter
         // Ensure the all apps icon height matches the workspace icons in portrait mode.
         icon.getLayoutParams().height =
                 mActivityContext.getDeviceProfile().getAllAppsProfile().getCellHeightPx();
+        AllAppsPanelCells.styleCell(mActivityContext, icon); // OpenBook
         return icon;
     }
 

@@ -53,7 +53,62 @@
     <!-- Blur off (battery saver, thermal, Developer options) or unavailable: the same layout, tint only. -->
     <item name="ob_glass_solid_alpha" format="float" type="dimen">0.96</item>
 
+    <!-- §3.1 All Apps panel: 6 columns of 112 dp plus 24 dp each side is 720 dp. Its height fits the apps
+         (header + rows × cell + bottom), at most ob_aa_max_height and the space above the taskbar less
+         ob_aa_screen_margin; its bottom is ob_aa_gap above the taskbar. -->
+    <integer name="ob_aa_columns">6</integer>
+    <dimen name="ob_aa_column">112dp</dimen>
+    <dimen name="ob_aa_inset">24dp</dimen>
+    <dimen name="ob_aa_header">84dp</dimen>
+    <dimen name="ob_aa_bottom">28dp</dimen>
+    <dimen name="ob_aa_max_height">640dp</dimen>
+    <dimen name="ob_aa_screen_margin">24dp</dimen>
+    <dimen name="ob_aa_gap">12dp</dimen>
+    <dimen name="ob_aa_radius">28dp</dimen>
+    <!-- §3.1 The search field: a 48 dp pill, a 20 dp icon, text 16/24. -->
+    <dimen name="ob_aa_field_height">48dp</dimen>
+    <dimen name="ob_aa_field_icon">20dp</dimen>
+    <dimen name="ob_aa_field_padding">16dp</dimen>
+    <dimen name="ob_aa_field_icon_gap">12dp</dimen>
+    <dimen name="ob_aa_field_text">16sp</dimen>
+    <dimen name="ob_aa_field_line">24sp</dimen>
+    <item name="ob_aa_paper_alpha_light" format="float" type="dimen">0.80</item>
+    <item name="ob_aa_paper_alpha_dark" format="float" type="dimen">0.85</item>
+    <!-- §3.2 The grid: 112 × 104 dp cells, a 52 dp icon 12 dp from the top, a 100 dp label 8 dp under it, at
+         13/16 and weight 450, two lines at most. -->
+    <dimen name="ob_aa_cell_height">104dp</dimen>
+    <dimen name="ob_aa_icon">52dp</dimen>
+    <dimen name="ob_aa_icon_top">12dp</dimen>
+    <dimen name="ob_aa_label_gap">8dp</dimen>
+    <dimen name="ob_aa_label_width">100dp</dimen>
+    <dimen name="ob_aa_label_text">13sp</dimen>
+    <dimen name="ob_aa_label_line">16sp</dimen>
+    <integer name="ob_aa_label_weight">450</integer>
+    <dimen name="ob_aa_cell_radius">16dp</dimen>
+    <item name="ob_state_top_hit" format="float" type="dimen">0.10</item>
+    <item name="ob_aa_press_scale" format="float" type="dimen">0.96</item>
+    <!-- §3.3 No results: 14/20 in soft ink. -->
+    <dimen name="ob_aa_empty_text">14sp</dimen>
+    <dimen name="ob_aa_empty_line">20sp</dimen>
+    <dimen name="ob_aa_empty_top">40dp</dimen>
+    <!-- §3.4 Open: scale 0.96 → 1 from the bottom centre and a 16 dp rise on spring.panel, opacity on
+         duration.fade, the grid fading in after 40 ms. Close: duration.exit to 0.98 and an 8 dp fall. -->
+    <item name="ob_aa_open_scale" format="float" type="dimen">0.96</item>
+    <dimen name="ob_aa_rise">16dp</dimen>
+    <item name="ob_aa_close_scale" format="float" type="dimen">0.98</item>
+    <dimen name="ob_aa_fall">8dp</dimen>
+    <integer name="ob_aa_grid_delay_ms">40</integer>
+
+    <!-- §6.3 Panel shadow: 0 24 48 and 0 2 6 (offset, blur), light and dark. -->
+    <dimen name="ob_shadow_key_y">24dp</dimen>
+    <dimen name="ob_shadow_key_blur">48dp</dimen>
+    <dimen name="ob_shadow_ambient_y">2dp</dimen>
+    <dimen name="ob_shadow_ambient_blur">6dp</dimen>
+
     <!-- §7 Motion. Springs: stiffness, damping ratio. Durations in ms. -->
+    <item name="ob_spring_panel_stiffness" format="float" type="dimen">500</item>
+    <item name="ob_spring_panel_damping" format="float" type="dimen">0.90</item>
+    <integer name="ob_duration_exit_ms">150</integer>
     <item name="ob_spring_settle_stiffness" format="float" type="dimen">700</item>
     <item name="ob_spring_settle_damping" format="float" type="dimen">0.90</item>
     <item name="ob_spring_tick_stiffness" format="float" type="dimen">1400</item>
@@ -63,4 +118,8 @@
     <integer name="ob_duration_hover_out_ms">150</integer>
 
     <item type="id" name="openbook_taskbar_icon_state" />
+    <item type="id" name="openbook_allapps_cell_state" />
+
+    <!-- §3.3 Our own wording; English only, like the rest of OpenBook's strings here. -->
+    <string name="ob_aa_no_results" translatable="false">No apps match “%1$s”</string>
 </resources>

@@ -84,6 +84,7 @@ import com.android.launcher3.keyboard.FocusedItemDecorator;
 import com.android.launcher3.keyboard.ViewGroupFocusHelper;
 import com.android.launcher3.model.StringCache;
 import com.android.launcher3.model.data.ItemInfo;
+import com.android.launcher3.openbook.AllAppsPanelCells;
 import com.android.launcher3.model.repository.StringCacheRepository;
 import com.android.launcher3.pm.UserCache;
 import com.android.launcher3.recyclerview.AllAppsRecyclerViewPool;
@@ -358,6 +359,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
     /** Invoke when the current search session is finished. */
     public void onClearSearchResult() {
         getMainAdapterProvider().clearHighlightedItem();
+        AllAppsPanelCells.onSearchResults(mActivityContext, this, null); // OpenBook: no top hit
         animateToSearchState(false);
         rebindAdapters();
     }
@@ -367,6 +369,7 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
      */
     public void setSearchResults(ArrayList<AdapterItem> results) {
         getMainAdapterProvider().clearHighlightedItem();
+        AllAppsPanelCells.onSearchResults(mActivityContext, this, results); // OpenBook: the top hit
         if (getSearchResultList().setSearchResults(results)) {
             getSearchRecyclerView().onSearchResultsChanged();
         }
@@ -578,7 +581,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         // Header keeps track of active recycler view to properly render header protection.
         mHeader.setActiveRV(currentActivePage);
-        reset(true /* animate */, !isSearching() /* exitSearch */, false /* clearScrim */);
+        // OpenBook: an emptied search in the panel keeps the field focused for typing; AOSP's reset of the search
+        // bar takes its focus away (AllAppsPanelCells).
+        reset(true /* animate */, !isSearching() && !AllAppsPanelCells.isPanel(mActivityContext)
+                /* exitSearch */, false /* clearScrim */);
 
         mWorkManager.onActivePageChanged(currentActivePage);
     }
@@ -755,7 +761,8 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
                 getCurrentPage(),
                 tabsHidden);
 
-        int padding = mHeader.getMaxTranslation();
+        // OpenBook: in the panel the grid starts 12 dp under the field (AllAppsPanelCells).
+        int padding = AllAppsPanelCells.gridTop(mActivityContext, mHeader.getMaxTranslation());
         mAH.forEach(adapterHolder -> {
             adapterHolder.mPadding.top = padding;
             adapterHolder.applyPadding();
@@ -907,8 +914,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         RelativeLayout.LayoutParams layoutParams = (LayoutParams) v.getLayoutParams();
         layoutParams.addRule(RelativeLayout.ALIGN_TOP, R.id.search_container_all_apps);
 
-        int topMargin = getContext().getResources().getDimensionPixelSize(
-                R.dimen.all_apps_header_top_margin);
+        // OpenBook: in the panel the lists start right under the field (AllAppsPanelCells).
+        int topMargin = AllAppsPanelCells.belowField(mActivityContext,
+                getContext().getResources().getDimensionPixelSize(
+                        R.dimen.all_apps_header_top_margin));
         if (includeTabsMargin) {
             topMargin += getContext().getResources().getDimensionPixelSize(
                     R.dimen.all_apps_header_pill_height);
@@ -1614,7 +1623,9 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
             FocusedItemDecorator focusedItemDecorator = isSearch() ? new FocusedItemDecorator(
                     new ViewGroupFocusHelper(mRecyclerView)) : new FocusedItemDecorator(
                     mRecyclerView);
-            mRecyclerView.addItemDecoration(focusedItemDecorator);
+            if (!AllAppsPanelCells.isPanel(mActivityContext)) { // OpenBook: the panel's cells draw a ring
+                mRecyclerView.addItemDecoration(focusedItemDecorator);
+            }
             mOnFocusChangeListener = focusedItemDecorator.getFocusListener();
             mAdapter.setIconFocusListener(mOnFocusChangeListener);
             applyPadding();
