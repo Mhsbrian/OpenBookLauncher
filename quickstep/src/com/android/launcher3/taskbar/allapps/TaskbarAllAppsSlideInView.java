@@ -175,7 +175,10 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         }
         if (mIsOpen) {
             mAllAppsCallbacks.onAllAppsTransitionStart(false);
-            if (mPanel != null) mPanel.onCloseStart(); // OpenBook
+            if (mPanel != null) { // OpenBook: the panel isn't swiped; it closes on its own exit, never a fling's
+                mPanel.onCloseStart(mSwipeDetector.isIdleState());
+                mSwipeDetector.finishedScrolling();
+            }
         }
         handleClose(animate, mPanel != null
                 ? mPanel.getCloseDurationMs() : mAllAppsCallbacks.getCloseDuration());
