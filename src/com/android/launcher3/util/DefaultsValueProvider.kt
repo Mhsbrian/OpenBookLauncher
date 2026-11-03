@@ -47,7 +47,9 @@ interface DefaultsValueProvider {
 class BaseDefaultsValueProvider
 @Inject
 constructor(@ApplicationContext private val context: Context) : DefaultsValueProvider {
-    override val enableTwoLineToggle: Boolean = false
+    // OpenBook: a resource, so a desktop overlay can turn two-line names on (openbook/ROADMAP.md, M1 #6).
+    override val enableTwoLineToggle: Boolean
+        get() = context.resources.getBoolean(R.bool.pref_enable_two_line_toggle_default)
 
     // OpenBook: a resource, so a desktop overlay can turn it off (openbook/ROADMAP.md, M1 #5).
     override val addIconToHome: Boolean

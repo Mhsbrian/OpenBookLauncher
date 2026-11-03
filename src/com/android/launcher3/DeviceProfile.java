@@ -58,6 +58,7 @@ import com.android.launcher3.deviceprofile.WorkspaceProfile;
 import com.android.launcher3.display.DisplayController;
 import com.android.launcher3.display.LauncherDisplayInfo;
 import com.android.launcher3.model.data.ItemInfo;
+import com.android.launcher3.openbook.TwoLineLabels;
 import com.android.launcher3.responsive.CalculatedCellSpec;
 import com.android.launcher3.responsive.CalculatedHotseatSpec;
 import com.android.launcher3.responsive.CalculatedResponsiveSpec;
@@ -414,7 +415,9 @@ public class DeviceProfile {
         }
 
         if (inv.enableTwoLinesInAllApps
-                && !(mIsResponsiveGrid && getAllAppsProfile().getMaxAllAppsTextLineCount() == 2)) {
+                && !(mIsResponsiveGrid && getAllAppsProfile().getMaxAllAppsTextLineCount() == 2)
+                // OpenBook: a cell that already fits two lines keeps its height (TwoLineLabels).
+                && !TwoLineLabels.cellFitsTwoLines(getAllAppsProfile())) {
             // Add extra textHeight to the existing allAppsCellHeight.
             mAllAppsProfile = getAllAppsProfile().copyWithCellHeightPx(
                     getAllAppsProfile().getCellHeightPx()
