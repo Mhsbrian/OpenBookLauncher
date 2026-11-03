@@ -23,7 +23,7 @@ Legend: **code** = new code in this fork; **flag** = AOSP 17 already has the cod
 | 2 | **Meta+1…9** opens or focuses the Nth taskbar app | code | Not in AOSP 17 Launcher3 |
 | 3 | **Drag a pinned app off the taskbar** to unpin it | flag + code | `enable_taskbar_drag_to_remove` (OpenBook's value set), plus a quickstep fix: on the home screen a mouse drag up off the taskbar was taken as swipe-up-to-home |
 | 4 | **Middle-click** a taskbar icon to open a new window of that app | code | Only for apps that support multiple instances (`supportsMultiInstance()`, as the menu's "New window"). Other apps open or come to front; a middle click never minimizes |
-| 5 | **New apps stay off the desktop** (setting, default off on desktop) | code | AOSP hard-codes `addIconToHome = true`. OpenBook's commit "new app icons go on the first desktop page" (Quire) stays for apps Quire builds |
+| 5 | **New apps stay off the desktop** (setting, default off on desktop) | code + value | The default of "Add app icons to home screen" is `bool/pref_add_icon_to_home_default` (true, as AOSP), read by `DefaultsValueProvider` and the Settings switch; OpenBook's desktop overlay sets it to false. A choice made in Settings is kept. Icons that still go on the desktop (the setting on, or an app's own pin request) take the first page with space ("new app icons go on the first desktop page") |
 | 6 | **Two-line app names** in All Apps | flag | `enable_twoline_allapps` |
 | 7 | **Type to search:** typing on the empty desktop opens All Apps with the text in its search field | code | |
 
