@@ -195,7 +195,6 @@ class AllAppsPanel private constructor(
             setSize(res.getDimensionPixelSize(R.dimen.ob_focus_ring), 1)
         }
         field.highlightColor = ColorUtils.setAlphaComponent(primary, 0x40)
-        field.setOnFocusChangeListener { _, has -> if (!has) Log.d(TAG, "DEBUG field lost focus", Throwable()) }
         // ↓ goes into the grid (Tab already does); the field otherwise keeps the arrows for its text.
         field.setOnKeyListener { _, code, event ->
             code == KeyEvent.KEYCODE_DPAD_DOWN && event.hasNoModifiers() &&
@@ -274,8 +273,8 @@ class AllAppsPanel private constructor(
 
     /**
      * Esc, from the field or the grid, before the IME sees it: with text in the field it clears the text and puts
-     * focus back in the field for typing; with none it closes the panel. AOSP's Esc left it to the IME and Back, whose
-     * reset of the search also took the field's focus away.
+     * focus back in the field for typing; with none it closes the panel. AOSP's Esc went through the IME and Back,
+     * whose reset of the search also took the field's focus away.
      */
     fun onKeyPreIme(event: KeyEvent): Boolean {
         if (event.keyCode != KeyEvent.KEYCODE_ESCAPE || !event.hasNoModifiers()) return false

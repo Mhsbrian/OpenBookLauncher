@@ -581,7 +581,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         }
         // Header keeps track of active recycler view to properly render header protection.
         mHeader.setActiveRV(currentActivePage);
-        reset(true /* animate */, !isSearching() /* exitSearch */, false /* clearScrim */);
+        // OpenBook: an emptied search in the panel keeps the field focused for typing; AOSP's reset of the search
+        // bar takes its focus away (AllAppsPanelCells).
+        reset(true /* animate */, !isSearching() && !AllAppsPanelCells.isPanel(mActivityContext)
+                /* exitSearch */, false /* clearScrim */);
 
         mWorkManager.onActivePageChanged(currentActivePage);
     }
