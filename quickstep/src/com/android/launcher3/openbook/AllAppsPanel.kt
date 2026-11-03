@@ -37,6 +37,7 @@ import androidx.dynamicanimation.animation.SpringForce
 import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
 import com.android.app.animation.Interpolators.STANDARD
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
+import com.android.launcher3.AbstractFloatingView
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.DeviceProfile
 import com.android.launcher3.R
@@ -112,6 +113,7 @@ class AllAppsPanel private constructor(
     private var fade: ValueAnimator? = null
     private var gridFade: ValueAnimator? = null
     private var closing = false
+    private var escapeDown = false
     private var closeFrom = floatArrayOf(1f, 1f, 0f) // alpha, scale, translationY when the close began
 
     init {
@@ -267,6 +269,29 @@ class AllAppsPanel private constructor(
             }
         }
         v.clipToOutline = true
+    }
+
+    /**
+     * Esc, from the field or the grid, before the IME sees it: with text in the field it clears the text and puts
+     * focus back in the field for typing; with none it closes the panel. AOSP's Esc left it to the IME and Back, whose
+     * reset of the search also took the field's focus away.
+     */
+    fun onKeyPreIme(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_ESCAPE || !event.hasNoModifiers()) return false
+        if (event.action == KeyEvent.ACTION_UP) return escapeDown.also { escapeDown = false }
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        escapeDown = true
+        if (event.repeatCount > 0) return true
+        val field = appsView.searchUiManager.editText
+        if (field != null && !field.text.isNullOrEmpty()) {
+            field.setText("")
+            field.requestFocusExplicitly()
+            Log.d(TAG, "Esc cleared the search")
+        } else {
+            (sheet as? AbstractFloatingView)?.close(true)
+            Log.d(TAG, "Esc closed the panel")
+        }
+        return true
     }
 
     /** Fixes the height for this opening, once there are apps to fit. */
@@ -508,19 +533,6 @@ class AllAppsPanel private constructor(
         fun isEnabled(context: TaskbarOverlayContext): Boolean =
             context.resources.getBoolean(R.bool.desktop_form_factor) && context.isPrimaryDisplay &&
                 !context.isTransientTaskbar
-
-        /**
-         * Esc with a search in the panel: clears the text and keeps the field focused for typing. AOSP's reset also
-         * takes the field's focus and hides the keyboard. False where All Apps isn't the panel.
-         */
-        @JvmStatic
-        fun clearSearchOnEscape(context: TaskbarOverlayContext, appsView: ActivityAllAppsContainerView<*>): Boolean {
-            if (!isEnabled(context)) return false
-            val field = appsView.searchUiManager.editText ?: return false
-            field.setText("")
-            field.requestFocusExplicitly()
-            return true
-        }
 
         /** The panel for the taskbar's All Apps [sheet] and its [appsView], or null where All Apps stays AOSP's. */
         @JvmStatic

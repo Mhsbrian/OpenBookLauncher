@@ -10,6 +10,7 @@ import android.text.TextPaint
 import android.text.TextUtils
 import com.android.launcher3.Utilities
 import com.android.launcher3.deviceprofile.AllAppsProfile
+import kotlin.math.max
 
 /**
  * Two-line app names in All Apps (openbook/ROADMAP.md, M1 #6). AOSP 17 has the code: the stored preference
@@ -30,8 +31,9 @@ object TwoLineLabels {
 
     /**
      * Whether [text], a name already broken after its first line, fits [height] as the label shows it: wrapped to
-     * [width], at most two lines, the second ending in "…". Exactly [height] fits (the All Apps panel's cells, M2 #9,
-     * leave the label two 16 dp lines and nothing more).
+     * [width], at most two lines, the second ending in "…". Exactly [height] fits. Lines set closer than the font's
+     * own height (negative [spacingExtra], as the All Apps panel's 13/16 labels, M2 #9) fit when their pitch does: the
+     * last line keeps the font's full height, and only its descent reaches past the pitch.
      */
     @JvmStatic
     fun fitsTwoLines(
@@ -49,7 +51,7 @@ object TwoLineLabels {
             .setEllipsize(TextUtils.TruncateAt.END)
             .setMaxLines(2)
             .build()
-            .height <= height
+            .height <= height + max(0f, -spacingExtra)
 
     /**
      * Whether an All Apps cell has room for a second line of its name without growing. `BubbleTextView` centres the

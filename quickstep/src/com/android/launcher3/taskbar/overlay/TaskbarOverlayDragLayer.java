@@ -31,7 +31,6 @@ import androidx.annotation.NonNull;
 
 import com.android.app.viewcapture.ViewCaptureFactory;
 import com.android.launcher3.AbstractFloatingView;
-import com.android.launcher3.openbook.AllAppsPanel;
 import com.android.launcher3.taskbar.allapps.TaskbarAllAppsContainerView;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
@@ -109,9 +108,7 @@ public class TaskbarOverlayDragLayer extends
         // All Apps, and then there is no apps view.
         TaskbarAllAppsContainerView appsView = mContainer.getAppsView();
         if (appsView != null && !appsView.getSearchUiManager().isSearchQueryEmpty()) {
-            if (!AllAppsPanel.clearSearchOnEscape(mContainer, appsView)) { // OpenBook: keep typing
-                appsView.getSearchUiManager().resetSearch();
-            }
+            appsView.getSearchUiManager().resetSearch();
             return true;
         }
 

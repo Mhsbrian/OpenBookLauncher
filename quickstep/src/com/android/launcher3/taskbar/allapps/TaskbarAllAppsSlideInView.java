@@ -31,6 +31,7 @@ import android.os.Trace;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.CrossWindowBlurListeners;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewRootImpl;
@@ -304,6 +305,13 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
             return true;
         }
         return super.onControllerTouchEvent(ev);
+    }
+
+    @Override
+    public boolean dispatchKeyEventPreIme(KeyEvent event) {
+        // OpenBook: Esc in the panel, before the IME or its fallback to Back can take it.
+        if (mPanel != null && mPanel.onKeyPreIme(event)) return true;
+        return super.dispatchKeyEventPreIme(event);
     }
 
     @Override
