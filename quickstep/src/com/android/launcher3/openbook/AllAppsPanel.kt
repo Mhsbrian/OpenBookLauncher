@@ -20,6 +20,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.os.SystemClock
 import android.util.Log
 import android.util.TypedValue
 import android.view.CrossWindowBlurListeners
@@ -114,6 +115,7 @@ class AllAppsPanel private constructor(
     private var gridFade: ValueAnimator? = null
     private var closing = false
     private var escapeDown = false
+    private var closeStart = 0L
     private var closeFrom = floatArrayOf(1f, 1f, 0f) // alpha, scale, translationY when the close began
 
     init {
@@ -226,10 +228,12 @@ class AllAppsPanel private constructor(
         if (!animate || !ValueAnimator.areAnimatorsEnabled()) {
             apply(1f, 1f, 0f)
             grid.alpha = 1f
+            Log.d(TAG, "open: a cut, ${panelHeight}px tall")
             return
         }
         apply(0f, openScale, rise)
         openSpring?.cancel()
+        val start = SystemClock.uptimeMillis()
         openSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce(1f).setStiffness(panelStiffness).setDampingRatio(panelDamping)
             setMinimumVisibleChange(SpringAnimation.MIN_VISIBLE_CHANGE_SCALE)
@@ -239,6 +243,10 @@ class AllAppsPanel private constructor(
                     appsView.scaleY = appsView.scaleX
                     appsView.translationY = rise * (1f - p)
                 }
+            }
+            addEndListener { _, canceled, _, _ ->
+                Log.d(TAG, "open: spring.panel ${if (canceled) "cut short" else "settled"} after " +
+                    "${SystemClock.uptimeMillis() - start} ms, ${panelHeight}px tall")
             }
             start()
         }
@@ -316,6 +324,7 @@ class AllAppsPanel private constructor(
     fun onCloseStart() {
         if (closing) return
         closing = true
+        closeStart = SystemClock.uptimeMillis()
         openSpring?.cancel()
         fade?.cancel()
         closeFrom = floatArrayOf(appsView.alpha, appsView.scaleX, appsView.translationY)
@@ -329,6 +338,10 @@ class AllAppsPanel private constructor(
         if (!toClosed || !closing) return
         val (a, s, y) = closeFrom
         apply(a * (1f - shift), s + (closeScale - s) * shift, y + (fall - y) * shift)
+        if (shift >= 1f && closeStart != 0L) {
+            Log.d(TAG, "close: ${SystemClock.uptimeMillis() - closeStart} ms")
+            closeStart = 0L
+        }
     }
 
     private fun apply(alpha: Float, scale: Float, translationY: Float) {
