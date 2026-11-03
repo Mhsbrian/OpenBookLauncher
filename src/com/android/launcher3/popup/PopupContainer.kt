@@ -212,6 +212,7 @@ open class PopupContainer<T : ActivityContext>(
                         OpenBookMenuContent(
                             spec = openBook.spec,
                             focusSignal = openBook.focusSignal,
+                            focusLast = openBook.focusLast,
                             items = systemShortcuts,
                             deepShortcuts = viewModel.state.deepShortcuts,
                             onItem = { onClickListener(SystemShortcutClickEvent(it)) },

@@ -27,6 +27,7 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.graphics.ColorUtils
 import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
 import com.android.app.animation.Interpolators.LINEAR
@@ -331,6 +332,15 @@ object OpenBookMenu {
             }
         }
 
+        /**
+         * Bumped when the menu, opened from the keyboard, is shown: [OpenBookMenuContent] then gives its first row the
+         * focus (a FocusRequester, after the caller's own `requestFocus` on the popup).
+         */
+        val focusSignal = mutableIntStateOf(0)
+
+        /** Whether [focusSignal] asks for the last row rather than the first. */
+        val focusLast = mutableStateOf(false)
+
         init {
             if (glass != null) {
                 glass.radius = t.radius
@@ -351,6 +361,20 @@ object OpenBookMenu {
             popup.isFocusable = true
             popup.isFocusableInTouchMode = true
             popup.defaultFocusHighlightEnabled = false
+            // While the menu itself holds the focus (opened with the pointer), the arrows and Tab enter its rows:
+            // ↓, Tab and Home at the first, ↑, Shift+Tab and End at the last.
+            popup.setOnKeyListener { _, keyCode, event ->
+                if (event.action != KeyEvent.ACTION_DOWN || !popup.isFocused) return@setOnKeyListener false
+                val last = when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME -> false
+                    KeyEvent.KEYCODE_TAB -> event.isShiftPressed
+                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_MOVE_END -> true
+                    else -> return@setOnKeyListener false
+                }
+                focusLast.value = last
+                focusSignal.intValue++
+                true
+            }
             Log.d(TAG, "menu: $spec, glass ${if (glass == null) "none (tint)" else "on"}")
         }
 
@@ -510,11 +534,6 @@ object OpenBookMenu {
             glass?.surfaceAlpha = a
         }
 
-        /**
-         * Bumped when the menu, opened from the keyboard, is shown: [OpenBookMenuContent] then gives its first row the
-         * focus (a FocusRequester, after the caller's own `requestFocus` on the popup).
-         */
-        val focusSignal = mutableIntStateOf(0)
 
         /**
          * The menu is visible: a menu opened from the keyboard focuses its first row; one opened with the pointer

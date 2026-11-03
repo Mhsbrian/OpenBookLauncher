@@ -102,6 +102,7 @@ import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 fun OpenBookMenuContent(
     spec: OpenBookMenu.Spec,
     focusSignal: State<Int>,
+    focusLast: State<Boolean>,
     items: List<PopupItem>,
     deepShortcuts: List<ItemInfoWithIcon?>,
     onItem: (PopupItem) -> Unit,
@@ -244,12 +245,12 @@ fun OpenBookMenuContent(
             // Shift+F10 and the menu key aren't navigation keys, so the window can still be in touch mode, where
             // rows don't take focus: leave it, as the keyboard would.
             if (view.isInTouchMode) view.requestFocusFromTouch()
-            val first = requesters.firstOrNull()
+            val first = if (focusLast.value) requesters.lastOrNull() else requesters.firstOrNull()
             first?.requestFocus()
             withFrameNanos {}
             android.util.Log.d(
                 OpenBookMenu.TAG,
-                "keyboard: first row focus requested ${first != null}, row $focusedIndex focused, view focus " +
+                "keyboard: ${if (focusLast.value) "last" else "first"} row focus requested ${first != null}, row $focusedIndex focused, view focus " +
                     "${view.hasFocus()} (window focus ${view.hasWindowFocus()}, touch mode ${view.isInTouchMode}, " +
                     "focused ${view.rootView.findFocus()?.javaClass?.simpleName})",
             )
