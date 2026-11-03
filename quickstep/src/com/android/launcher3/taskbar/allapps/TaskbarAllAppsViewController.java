@@ -25,6 +25,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.allapps.AllAppsTransitionListener;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.appprediction.AppsDividerView;
+import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.taskbar.NavbarButtonsViewController;
 import com.android.launcher3.taskbar.TaskbarControllers;
 import com.android.launcher3.taskbar.TaskbarSharedState;
@@ -138,6 +139,7 @@ final class TaskbarAllAppsViewController {
                     && mShowKeyboard
                     && mAppsView.getSearchUiManager().getEditText() != null) {
                 mAppsView.getSearchUiManager().getEditText().requestFocusExplicitly();
+                TypeToSearch.typeInto(mAppsView.getSearchUiManager().getEditText()); // OpenBook
             }
         }
 

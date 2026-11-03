@@ -24,6 +24,7 @@ import androidx.annotation.AnyThread
 import com.android.launcher3.Flags.enableTaskbarUiThread
 import com.android.launcher3.LauncherState
 import com.android.launcher3.model.data.ItemInfo
+import com.android.launcher3.openbook.TypeToSearch
 import com.android.launcher3.util.AsyncView
 import com.android.launcher3.util.Executors.MAIN_EXECUTOR
 import com.android.launcher3.util.Executors.getTaskbarUiThread
@@ -116,6 +117,12 @@ class TaskbarInteractor(private val taskbarUIController: TaskbarUIController) {
         if (taskbarUIController is LauncherTaskbarUIController) {
             getTaskbarUiThread().execute { taskbarUIController.showEduOnAppLaunch() }
         }
+    }
+
+    /** OpenBook: types the keys type to search queued into the taskbar's All Apps search (openbook/TypeToSearch). */
+    @AnyThread
+    fun typeIntoAllAppsSearch() {
+        getTaskbarUiThread().execute { TypeToSearch.typeIntoTaskbarAllApps(taskbarUIController.rootView) }
     }
 
     @AnyThread
