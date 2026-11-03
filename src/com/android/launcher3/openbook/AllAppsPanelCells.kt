@@ -4,7 +4,6 @@
  */
 package com.android.launcher3.openbook
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -18,10 +17,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
-import androidx.dynamicanimation.animation.FloatValueHolder
-import androidx.dynamicanimation.animation.SpringAnimation
-import androidx.dynamicanimation.animation.SpringForce
-import com.android.app.animation.Interpolators.STANDARD
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.R
 import com.android.launcher3.allapps.ActivityAllAppsContainerView
@@ -122,8 +117,8 @@ class AllAppsPanelCells(context: Context) {
 
     /** One cell's animated state: its layer's opacity and its icon's scale. */
     private inner class CellState(private val view: BubbleTextView) {
-        val layer = Anim(view, 0f)
-        val scale = Anim(view, 1f)
+        val layer = OpenBookMotion.Value(0f) { view.invalidate() }
+        val scale = OpenBookMotion.Value(1f) { view.invalidate() }
 
         fun update(animate: Boolean) {
             val pressed = view.isPressed
@@ -133,8 +128,8 @@ class AllAppsPanelCells(context: Context) {
                 view.isHovered -> t.stateHover
                 else -> 0f
             }
-            layer.ease(to, if (to > layer.value) t.hoverInMs else t.hoverOutMs, animate)
-            scale.spring(if (pressed) t.pressScale else 1f, t.tickStiffness, t.tickDamping, animate)
+            layer.ease(to, OpenBookMotion.hover(layer.value, to), animate)
+            scale.spring(if (pressed) t.pressScale else 1f, OpenBookMotion.TICK, animate = animate)
         }
     }
 
@@ -194,65 +189,9 @@ class AllAppsPanelCells(context: Context) {
         val statePressed = res.getFloat(R.dimen.ob_state_pressed)
         val pressScale = res.getFloat(R.dimen.ob_aa_press_scale)
         val ring = res.getDimension(R.dimen.ob_focus_ring)
-        val tickStiffness = res.getFloat(R.dimen.ob_spring_tick_stiffness)
-        val tickDamping = res.getFloat(R.dimen.ob_spring_tick_damping)
-        val hoverInMs = res.getInteger(R.integer.ob_duration_hover_in_ms).toLong()
-        val hoverOutMs = res.getInteger(R.integer.ob_duration_hover_out_ms).toLong()
         val primary = c.getColor(R.color.materialColorPrimary)
         val onSurface = c.getColor(R.color.materialColorOnSurface)
         val onSurfaceVariant = c.getColor(R.color.materialColorOnSurfaceVariant)
-    }
-
-    /** A value that eases or springs to its target, redrawing [view]; a cut without animations. */
-    private class Anim(private val view: View, initial: Float) {
-        var value = initial
-            private set
-        private var target = initial
-        private var animator: ValueAnimator? = null
-        private var spring: SpringAnimation? = null
-
-        private fun snap(v: Float) {
-            animator?.cancel()
-            spring?.cancel()
-            value = v
-            target = v
-            view.invalidate()
-        }
-
-        fun ease(to: Float, durationMs: Long, animate: Boolean) {
-            if (to == target) return
-            target = to
-            if (!animate || !ValueAnimator.areAnimatorsEnabled()) return snap(to)
-            spring?.cancel()
-            animator?.cancel()
-            animator = ValueAnimator.ofFloat(value, to).apply {
-                duration = durationMs
-                interpolator = STANDARD
-                addUpdateListener {
-                    value = it.animatedValue as Float
-                    view.invalidate()
-                }
-                start()
-            }
-        }
-
-        fun spring(to: Float, stiffness: Float, damping: Float, animate: Boolean) {
-            if (to == target) return
-            target = to
-            if (!animate || !ValueAnimator.areAnimatorsEnabled()) return snap(to)
-            animator?.cancel()
-            val s = spring ?: SpringAnimation(FloatValueHolder()).also { s ->
-                s.spring = SpringForce(to).setStiffness(stiffness).setDampingRatio(damping)
-                s.setMinimumVisibleChange(SpringAnimation.MIN_VISIBLE_CHANGE_SCALE)
-                s.addUpdateListener { _, v, _ ->
-                    value = v
-                    view.invalidate()
-                }
-                spring = s
-            }
-            if (!s.isRunning) s.setStartValue(value)
-            s.animateToFinalPosition(to)
-        }
     }
 
     companion object {

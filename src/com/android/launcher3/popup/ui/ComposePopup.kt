@@ -18,6 +18,7 @@ package com.android.launcher3.popup.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
@@ -50,12 +51,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.android.launcher3.R
+import com.android.launcher3.openbook.OpenBookMenu
+import com.android.launcher3.openbook.OpenBookMotion
 import com.android.launcher3.model.data.ItemInfoWithIcon
 import com.android.launcher3.popup.ui.PopupMenuItemDimens.popupMenuItemHeight
 import com.android.launcher3.popup.ui.PopupMenuItemDimens.popupMenuItemHorizontalPadding
@@ -268,9 +272,16 @@ fun ExpandableContainer(
     modifier: Modifier = Modifier,
     transition: Transition<Boolean>,
 ) {
+    // OpenBook (openbook/OpenBookMotion): on a desk, the expansion's opacity on duration.fade and its size on
+    // spring.settle (OpenBook's docs/launcher-design.md §7).
+    val desk = OpenBookMenu.isEnabled(LocalContext.current)
+    val contentSpec: FiniteAnimationSpec<Float> =
+        if (desk) OpenBookMotion.FADE.compose() else ComposePopupAnimations.popupContentSpringSpec
+    val containerSpec: FiniteAnimationSpec<IntSize> =
+        if (desk) OpenBookMotion.SETTLE.compose() else ComposePopupAnimations.popupContainerSpringSpec
     val animationProgress by
         transition.animateFloat(
-            transitionSpec = { ComposePopupAnimations.popupContentSpringSpec },
+            transitionSpec = { contentSpec },
             label = "ExpandCollapseProgress",
         ) { isExpanded ->
             if (isExpanded) 1f else 0f
@@ -290,13 +301,11 @@ fun ExpandableContainer(
                 // By providing a real fadeIn/fadeOut, we tell AnimatedContent to keep both
                 // the entering and exiting content composed during the animation.
                 // The actual alpha value will be controlled manually by the graphicsLayer below.
-                fadeIn(animationSpec = ComposePopupAnimations.popupContentSpringSpec) togetherWith
-                    fadeOut(animationSpec = ComposePopupAnimations.popupContentSpringSpec) using
+                fadeIn(animationSpec = contentSpec) togetherWith
+                    fadeOut(animationSpec = contentSpec) using
                     SizeTransform(
                         clip = true,
-                        sizeAnimationSpec = { _, _ ->
-                            ComposePopupAnimations.popupContainerSpringSpec
-                        },
+                        sizeAnimationSpec = { _, _ -> containerSpec },
                     )
             },
         ) { isExpanded ->

@@ -31,13 +31,11 @@ import android.widget.LinearLayout
 import androidx.core.graphics.ColorUtils
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
-import androidx.dynamicanimation.animation.SpringForce
-import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
-import com.android.app.animation.Interpolators.STANDARD
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.launcher3.AbstractFloatingView
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.DeviceProfile
+import com.android.launcher3.Flags
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
 import com.android.launcher3.allapps.ActivityAllAppsContainerView
@@ -92,14 +90,11 @@ class AllAppsPanel private constructor(
     private val rise = res.getDimension(R.dimen.ob_aa_rise)
     private val closeScale = res.getFloat(R.dimen.ob_aa_close_scale)
     private val fall = res.getDimension(R.dimen.ob_aa_fall)
-    private val panelStiffness = res.getFloat(R.dimen.ob_spring_panel_stiffness)
-    private val panelDamping = res.getFloat(R.dimen.ob_spring_panel_damping)
-    private val fadeMs = res.getInteger(R.integer.ob_duration_fade_ms).toLong()
     private val gridDelayMs = res.getInteger(R.integer.ob_aa_grid_delay_ms).toLong()
 
-    /** Closing: `duration.exit` on emphasised accelerate. */
-    val closeDurationMs = res.getInteger(R.integer.ob_duration_exit_ms)
-    val closeInterpolator: Interpolator = EMPHASIZED_ACCELERATE
+    /** Closing: `duration.exit` (150 ms, emphasised accelerate). */
+    val closeDurationMs = OpenBookMotion.EXIT.ms.toInt()
+    val closeInterpolator: Interpolator = OpenBookMotion.EXIT.curve
 
     private val glass = GlassDrawable(appsView, GlassDrawable.Shadow.PANEL, "panel", TAG)
     private val insets = Rect()
@@ -224,7 +219,7 @@ class AllAppsPanel private constructor(
         clipToPanel(appsView.searchRecyclerView)
         appsView.pivotX = width / 2f
         appsView.pivotY = panelHeight.toFloat()
-        if (!animate || !ValueAnimator.areAnimatorsEnabled()) {
+        if (!animate || !OpenBookMotion.enabled) {
             apply(1f, 1f, 0f)
             grid.alpha = 1f
             Log.d(TAG, "open: a cut, ${panelHeight}px tall")
@@ -235,7 +230,7 @@ class AllAppsPanel private constructor(
         val start = SystemClock.uptimeMillis()
         val frames = FrameLog()
         openSpring = SpringAnimation(FloatValueHolder(0f)).apply {
-            spring = SpringForce(1f).setStiffness(panelStiffness).setDampingRatio(panelDamping)
+            spring = OpenBookMotion.PANEL.force(1f)
             setMinimumVisibleChange(SpringAnimation.MIN_VISIBLE_CHANGE_SCALE)
             addUpdateListener { _, p, _ ->
                 frames.frame()
@@ -246,26 +241,18 @@ class AllAppsPanel private constructor(
                 }
             }
             addEndListener { _, canceled, _, _ ->
-                Log.d(TAG, "open: spring.panel ($panelStiffness, $panelDamping) ${if (canceled) "cut short" else
+                Log.d(TAG, "open: ${OpenBookMotion.PANEL} ${if (canceled) "cut short" else
                     "settled"} ${frames.span()} ms from its first frame over ${frames.count} frames (longest " +
                     "${frames.longest} ms), ${SystemClock.uptimeMillis() - start} ms in all, ${panelHeight}px tall")
             }
             start()
         }
         fade?.cancel()
-        fade = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = fadeMs
-            interpolator = STANDARD
-            addUpdateListener { if (!closing) setAlpha(it.animatedValue as Float) }
-            start()
-        }
+        fade = OpenBookMotion.FADE.animator(0f, 1f) { if (!closing) setAlpha(it) }.apply { start() }
         grid.alpha = 0f
         gridFade?.cancel()
-        gridFade = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = fadeMs
+        gridFade = OpenBookMotion.FADE.animator(0f, 1f) { grid.alpha = it }.apply {
             startDelay = gridDelayMs
-            interpolator = STANDARD
-            addUpdateListener { grid.alpha = it.animatedValue as Float }
             start()
         }
     }
@@ -463,6 +450,19 @@ class AllAppsPanel private constructor(
         private var profileFrom: DeviceProfile? = null
         private var profile: DeviceProfile? = null
 
+        /**
+         * How long the launcher's ALL_APPS state takes to arrive ([opening]) or leave on a desk, where it opens the
+         * taskbar's All Apps (`all_apps_surface`), which is the panel: as long as the panel's own motion, `spring.panel`'s
+         * settling time opening (275 ms) and `duration.exit` closing (150 ms; design §7), in place of AOSP's 500 ms and
+         * 100 ms.
+         * Null elsewhere (AOSP's durations).
+         */
+        @JvmStatic
+        fun stateTransitionMs(context: Context, opening: Boolean): Int? {
+            if (!Flags.allAppsSurface() || !context.resources.getBoolean(R.bool.desktop_form_factor)) return null
+            return if (opening) OpenBookMotion.PANEL.settleMs().toInt() else OpenBookMotion.EXIT.ms.toInt()
+        }
+
         /** Whether [context]'s All Apps is the panel: the persistent taskbar of a desktop form factor, primary display. */
         @JvmStatic
         fun isEnabled(context: TaskbarOverlayContext): Boolean =
@@ -494,7 +494,7 @@ class AllAppsPanel private constructor(
                 iconDrawablePaddingPx = res.getDimensionPixelSize(R.dimen.ob_aa_label_gap),
                 maxAllAppsTextLineCount = 2,
                 cellWidthPx = res.getDimensionPixelSize(R.dimen.ob_aa_column),
-                closeDuration = res.getInteger(R.integer.ob_duration_exit_ms),
+                closeDuration = OpenBookMotion.EXIT.ms.toInt(),
                 leftRightMargin = 0,
                 padding = Rect(inset, inset, inset, 0),
                 numShownAllAppsColumns = res.getInteger(R.integer.ob_aa_columns),

@@ -4,10 +4,7 @@
  */
 package com.android.launcher3.openbook
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.app.ActivityManager.RunningTaskInfo
 import android.content.Context
 import android.graphics.Canvas
@@ -24,11 +21,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.android.app.animation.Interpolators.STANDARD
-import com.android.internal.dynamicanimation.animation.DynamicAnimation
-import com.android.internal.dynamicanimation.animation.FloatValueHolder
-import com.android.internal.dynamicanimation.animation.SpringAnimation
-import com.android.internal.dynamicanimation.animation.SpringForce
+import androidx.dynamicanimation.animation.DynamicAnimation
 import com.android.launcher3.AbstractFloatingView
 import com.android.launcher3.BubbleTextView
 import com.android.launcher3.BubbleTextView.RunningAppState
@@ -59,8 +52,9 @@ import java.io.PrintWriter
  * - in front (it has the focused window): a 16 × 3 dp line in `primary`, and a 6 % `onSurface` tile on the target;
  * - more than one window: the line and a 3 dp dot;
  * - every window minimized: a hollow 8 × 3 dp line.
- * The line's width springs (`spring.settle`) and its colour fades (120 ms). Targets get a hover layer (8 %, 12 % on the
- * front tile), a press scale (0.92 on `spring.tick`, layer 12 %) and a 2 dp `primary` keyboard focus ring 2 dp outside.
+ * The line's width springs (`spring.settle`) and its colour fades (`duration.fade`; [OpenBookMotion]). Targets get a
+ * hover layer (8 %, 12 % on the front tile, on `duration.hover`), a press scale (0.92 on `spring.tick`, layer 12 %) and
+ * a 2 dp `primary` keyboard focus ring 2 dp outside.
  * The tooltip is restyled ([styleTooltip]) and the bar is glass ([TaskbarGlass]). The bar stays 56 dp, so window insets
  * don't move.
  *
@@ -146,7 +140,7 @@ class OpenBookTaskbar(
         if (open == allAppsOpen) return
         allAppsOpen = open
         val pill = taskbarView.allAppsButtonContainer
-        state(pill).open.ease(if (open) 1f else 0f, t.fadeMs, pill.isAttachedToWindow)
+        state(pill).open.ease(if (open) 1f else 0f, OpenBookMotion.FADE, pill.isAttachedToWindow)
     }
 
     /** Taskbar UI thread: keyboard focus into the taskbar, on the apps pill or, [forward] false, the last app. */
@@ -270,13 +264,14 @@ class OpenBookTaskbar(
         var front = false
         /** A finger or the mouse's button is down on the target (see [TaskbarIconDecor.onTouchEvent]). */
         var pressed = false
-        val width = Anim(view, 0f)
-        val color = ColorAnim(view, t.onSurfaceVariant)
-        val fill = Anim(view, 1f)
-        val dot = Anim(view, 0f)
-        val layer = Anim(view, 0f)
-        val scale = Anim(view, 1f)
-        val open = Anim(view, 0f)
+        private val redraw: (Float) -> Unit = { view.invalidate() }
+        val width = OpenBookMotion.Value(0f, redraw)
+        val color = OpenBookMotion.ColorValue(t.onSurfaceVariant) { view.invalidate() }
+        val fill = OpenBookMotion.Value(1f, redraw)
+        val dot = OpenBookMotion.Value(0f, redraw)
+        val layer = OpenBookMotion.Value(0f, redraw)
+        val scale = OpenBookMotion.Value(1f, redraw)
+        val open = OpenBookMotion.Value(0f, redraw)
 
         fun set(running: RunningAppState, front: Boolean, multi: Boolean, animate: Boolean) {
             this.running = running
@@ -287,10 +282,10 @@ class OpenBookTaskbar(
                 front -> t.indFront
                 else -> t.indRun
             }
-            width.spring(w, t.settleStiffness, t.settleDamping, DynamicAnimation.MIN_VISIBLE_CHANGE_PIXELS, animate)
-            color.ease(if (front) t.primary else t.onSurfaceVariant, t.fadeMs, animate)
-            fill.ease(if (running == RunningAppState.MINIMIZED) 0f else 1f, t.fadeMs, animate)
-            dot.ease(if (multi && running != RunningAppState.NOT_RUNNING) 1f else 0f, t.fadeMs, animate)
+            width.spring(w, OpenBookMotion.SETTLE, DynamicAnimation.MIN_VISIBLE_CHANGE_PIXELS, animate)
+            color.ease(if (front) t.primary else t.onSurfaceVariant, OpenBookMotion.FADE, animate)
+            fill.ease(if (running == RunningAppState.MINIMIZED) 0f else 1f, OpenBookMotion.FADE, animate)
+            dot.ease(if (multi && running != RunningAppState.NOT_RUNNING) 1f else 0f, OpenBookMotion.FADE, animate)
             updateLayer(animate)
         }
 
@@ -303,8 +298,8 @@ class OpenBookTaskbar(
                 front -> t.stateFront
                 else -> 0f
             }
-            layer.ease(target, if (target > layer.value) t.hoverInMs else t.hoverOutMs, animate)
-            scale.spring(if (isPressed) t.pressScale else 1f, t.tickStiffness, t.tickDamping,
+            layer.ease(target, OpenBookMotion.hover(layer.value, target), animate)
+            scale.spring(if (isPressed) t.pressScale else 1f, OpenBookMotion.TICK,
                 DynamicAnimation.MIN_VISIBLE_CHANGE_SCALE, animate)
         }
 
@@ -491,13 +486,6 @@ class OpenBookTaskbar(
         val pressScale = res.getFloat(R.dimen.ob_press_scale)
         val ring = res.getDimension(R.dimen.ob_focus_ring)
         val ringOffset = res.getDimension(R.dimen.ob_focus_ring_offset)
-        val settleStiffness = res.getFloat(R.dimen.ob_spring_settle_stiffness)
-        val settleDamping = res.getFloat(R.dimen.ob_spring_settle_damping)
-        val tickStiffness = res.getFloat(R.dimen.ob_spring_tick_stiffness)
-        val tickDamping = res.getFloat(R.dimen.ob_spring_tick_damping)
-        val fadeMs = res.getInteger(R.integer.ob_duration_fade_ms).toLong()
-        val hoverInMs = res.getInteger(R.integer.ob_duration_hover_in_ms).toLong()
-        val hoverOutMs = res.getInteger(R.integer.ob_duration_hover_out_ms).toLong()
         val primary = c.getColor(R.color.materialColorPrimary)
         val onPrimary = c.getColor(R.color.materialColorOnPrimary)
         val secondaryContainer = c.getColor(R.color.materialColorSecondaryContainer)
@@ -505,83 +493,6 @@ class OpenBookTaskbar(
         val onSurface = c.getColor(R.color.materialColorOnSurface)
         val onSurfaceVariant = c.getColor(R.color.materialColorOnSurfaceVariant)
         val outlineVariant = c.getColor(R.color.materialColorOutlineVariant)
-    }
-
-    /** A value that eases to its target in a set time or springs to it, redrawing [view]; a cut without animations. */
-    private class Anim(private val view: View, initial: Float) {
-        var value = initial
-            private set
-        private var target = initial
-        private var animator: ValueAnimator? = null
-        private var spring: SpringAnimation? = null
-
-        fun snap(v: Float) {
-            animator?.cancel()
-            spring?.cancel()
-            value = v
-            target = v
-            view.invalidate()
-        }
-
-        fun ease(to: Float, durationMs: Long, animate: Boolean) {
-            if (to == target) return
-            target = to
-            if (!animate || !ValueAnimator.areAnimatorsEnabled()) return snap(to)
-            spring?.cancel()
-            animator?.cancel()
-            animator = ValueAnimator.ofFloat(value, to).apply {
-                duration = durationMs
-                interpolator = STANDARD
-                addUpdateListener {
-                    value = it.animatedValue as Float
-                    view.invalidate()
-                }
-                addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (animator === animation) animator = null
-                    }
-                })
-                start()
-            }
-        }
-
-        /** Springs to [to]; a spring in flight is retargeted and keeps its velocity. */
-        fun spring(to: Float, stiffness: Float, damping: Float, minVisibleChange: Float, animate: Boolean) {
-            if (to == target) return
-            target = to
-            if (!animate || !ValueAnimator.areAnimatorsEnabled()) return snap(to)
-            animator?.cancel()
-            animator = null
-            val s = spring ?: SpringAnimation(FloatValueHolder()).also { s ->
-                s.spring = SpringForce(to).setStiffness(stiffness).setDampingRatio(damping)
-                s.setMinimumVisibleChange(minVisibleChange)
-                s.addUpdateListener { _, v, _ ->
-                    value = v
-                    view.invalidate()
-                }
-                spring = s
-            }
-            if (!s.isRunning) s.setStartValue(value)
-            s.animateToFinalPosition(to)
-        }
-    }
-
-    /** A colour that fades to its target. */
-    private class ColorAnim(view: View, initial: Int) {
-        private var from = initial
-        private var to = initial
-        private val fraction = Anim(view, 1f)
-
-        val value: Int
-            get() = if (fraction.value >= 1f) to else ARGB.evaluate(fraction.value, from, to) as Int
-
-        fun ease(color: Int, durationMs: Long, animate: Boolean) {
-            if (color == to) return
-            from = value
-            to = color
-            fraction.snap(0f)
-            fraction.ease(1f, durationMs, animate)
-        }
     }
 
     companion object {
@@ -683,9 +594,12 @@ class OpenBookTaskbar(
         @JvmStatic
         fun tooltipDelayMs(context: Context): Long = context.resources.getInteger(R.integer.ob_tip_delay_ms).toLong()
 
+        /** The tooltip fades in on `duration.fade`. */
         @JvmStatic
-        fun tooltipFadeMs(context: Context): Long =
-            context.resources.getInteger(R.integer.ob_duration_fade_ms).toLong()
+        fun tooltipFade(animator: android.animation.Animator) {
+            animator.duration = OpenBookMotion.FADE.ms
+            animator.interpolator = OpenBookMotion.FADE.curve
+        }
 
         private fun withAlpha(color: Int, fraction: Float): Int {
             val a = (android.graphics.Color.alpha(color) * fraction.coerceIn(0f, 1f)).toInt()

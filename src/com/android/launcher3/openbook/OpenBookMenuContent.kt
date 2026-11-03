@@ -7,7 +7,6 @@ package com.android.launcher3.openbook
 import android.graphics.Rect
 import android.graphics.Typeface
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -351,11 +350,11 @@ private fun MenuRow(
         hovered -> t.stateHover
         else -> 0f
     }
-    // duration.hover: in 100 ms, out 150 ms, standard.
+    // duration.hover (OpenBookMotion): in as the layer deepens, out as it lightens.
     var last by remember { mutableStateOf(0f) }
     val layer by animateFloatAsState(
         targetValue = target,
-        animationSpec = tween(if (target >= last) t.hoverInMs else t.hoverOutMs, easing = t.standard),
+        animationSpec = OpenBookMotion.hover(last, target).compose(),
         label = "menuRowLayer",
     )
     last = target
@@ -458,9 +457,6 @@ private class UiTokens(
     val ring = dp(R.dimen.ob_focus_ring)
     val stateHover = res.getFloat(R.dimen.ob_state_hover)
     val statePressed = res.getFloat(R.dimen.ob_state_pressed)
-    val hoverInMs = res.getInteger(R.integer.ob_duration_hover_in_ms)
-    val hoverOutMs = res.getInteger(R.integer.ob_duration_hover_out_ms)
-    val standard = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
     val onSurface = Color(c.getColor(R.color.materialColorOnSurface))
     val onSurfaceVariant = Color(c.getColor(R.color.materialColorOnSurfaceVariant))
