@@ -86,6 +86,8 @@ class AllAppsPanelCells(context: Context) {
         for (i in 0 until rv.childCount) {
             val v = rv.getChildAt(i)
             if (v is BubbleTextView && v.tag === hit) {
+                // The field reports the IME's search action twice for one Enter: open it once.
+                topHit = null
                 Log.d(TAG, "Enter opens the top hit")
                 return v.performClick()
             }
@@ -174,8 +176,8 @@ class AllAppsPanelCells(context: Context) {
         val rect = RectF()
         val column = res.getDimension(R.dimen.ob_aa_column)
         val inset = res.getDimensionPixelSize(R.dimen.ob_aa_inset)
-        val gridTop = res.getDimensionPixelSize(R.dimen.ob_aa_header) - inset -
-            res.getDimensionPixelSize(R.dimen.ob_aa_field_height)
+        val fieldHeight = res.getDimensionPixelSize(R.dimen.ob_aa_field_height)
+        val gridTop = res.getDimensionPixelSize(R.dimen.ob_aa_header) - inset - fieldHeight
         val iconTop = res.getDimensionPixelSize(R.dimen.ob_aa_icon_top)
         val labelWidth = res.getDimension(R.dimen.ob_aa_label_width)
         val labelText = res.getDimension(R.dimen.ob_aa_label_text)
@@ -261,6 +263,10 @@ class AllAppsPanelCells(context: Context) {
         /** The grid's top padding under the field: 12 dp in the panel (84 dp header), else [aospPadding]. */
         @JvmStatic
         fun gridTop(context: Any?, aospPadding: Int): Int = of(context)?.t?.gridTop ?: aospPadding
+
+        /** How far under the field's top the lists start: the field's height in the panel, else [aospMargin]. */
+        @JvmStatic
+        fun belowField(context: Any?, aospMargin: Int): Int = of(context)?.t?.fieldHeight ?: aospMargin
 
         /** Whether [context]'s All Apps is the panel. */
         @JvmStatic

@@ -911,8 +911,10 @@ public class ActivityAllAppsContainerView<T extends Context & ActivityContext>
         RelativeLayout.LayoutParams layoutParams = (LayoutParams) v.getLayoutParams();
         layoutParams.addRule(RelativeLayout.ALIGN_TOP, R.id.search_container_all_apps);
 
-        int topMargin = getContext().getResources().getDimensionPixelSize(
-                R.dimen.all_apps_header_top_margin);
+        // OpenBook: in the panel the lists start right under the field (AllAppsPanelCells).
+        int topMargin = AllAppsPanelCells.belowField(mActivityContext,
+                getContext().getResources().getDimensionPixelSize(
+                        R.dimen.all_apps_header_top_margin));
         if (includeTabsMargin) {
             topMargin += getContext().getResources().getDimensionPixelSize(
                     R.dimen.all_apps_header_pill_height);

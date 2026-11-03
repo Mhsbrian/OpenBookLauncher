@@ -24,6 +24,7 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.CrossWindowBlurListeners
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
@@ -36,6 +37,7 @@ import androidx.dynamicanimation.animation.SpringForce
 import com.android.app.animation.Interpolators.EMPHASIZED_ACCELERATE
 import com.android.app.animation.Interpolators.STANDARD
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
+import com.android.launcher3.BubbleTextView
 import com.android.launcher3.DeviceProfile
 import com.android.launcher3.R
 import com.android.launcher3.Utilities
@@ -113,6 +115,8 @@ class AllAppsPanel private constructor(
     private var closeFrom = floatArrayOf(1f, 1f, 0f) // alpha, scale, translationY when the close began
 
     init {
+        // The header holds no rows here (no predictions, no tabs); without its paddings it clips nothing.
+        appsView.floatingHeaderView.setPadding(0, 0, 0, 0)
         appsView.findViewById<View>(R.id.bottom_sheet_handle)?.visibility = View.GONE
         appsView.findViewById<View>(R.id.bottom_sheet_handle_area)?.visibility = View.GONE
         glass.radius = res.getDimension(R.dimen.ob_aa_radius)
@@ -189,6 +193,21 @@ class AllAppsPanel private constructor(
             setSize(res.getDimensionPixelSize(R.dimen.ob_focus_ring), 1)
         }
         field.highlightColor = ColorUtils.setAlphaComponent(primary, 0x40)
+        // ↓ goes into the grid (Tab already does); the field otherwise keeps the arrows for its text.
+        field.setOnKeyListener { _, code, event ->
+            code == KeyEvent.KEYCODE_DPAD_DOWN && event.hasNoModifiers() &&
+                (event.action != KeyEvent.ACTION_DOWN || focusGrid())
+        }
+    }
+
+    /** Focus on the first cell of the list showing (the A-Z grid or the results). */
+    private fun focusGrid(): Boolean {
+        val rv = appsView.activeRecyclerView ?: return false
+        for (i in 0 until rv.childCount) {
+            val v = rv.getChildAt(i)
+            if (v is BubbleTextView && v.isFocusable) return v.requestFocus()
+        }
+        return false
     }
 
     /** The sheet is attached and opening: focus the field and run the panel's own opening. */
@@ -490,10 +509,17 @@ class AllAppsPanel private constructor(
             context.resources.getBoolean(R.bool.desktop_form_factor) && context.isPrimaryDisplay &&
                 !context.isTransientTaskbar
 
-        /** Esc cleared the search: keep typing in the field (AOSP's reset takes its focus away). */
+        /**
+         * Esc with a search in the panel: clears the text and keeps the field focused for typing. AOSP's reset also
+         * takes the field's focus and hides the keyboard. False where All Apps isn't the panel.
+         */
         @JvmStatic
-        fun onEscapeClearedSearch(context: TaskbarOverlayContext, appsView: ActivityAllAppsContainerView<*>) {
-            if (isEnabled(context)) appsView.searchUiManager.editText?.requestFocusExplicitly()
+        fun clearSearchOnEscape(context: TaskbarOverlayContext, appsView: ActivityAllAppsContainerView<*>): Boolean {
+            if (!isEnabled(context)) return false
+            val field = appsView.searchUiManager.editText ?: return false
+            field.setText("")
+            field.requestFocusExplicitly()
+            return true
         }
 
         /** The panel for the taskbar's All Apps [sheet] and its [appsView], or null where All Apps stays AOSP's. */

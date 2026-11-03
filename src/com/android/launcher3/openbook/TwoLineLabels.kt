@@ -30,7 +30,8 @@ object TwoLineLabels {
 
     /**
      * Whether [text], a name already broken after its first line, fits [height] as the label shows it: wrapped to
-     * [width], at most two lines, the second ending in "…".
+     * [width], at most two lines, the second ending in "…". Exactly [height] fits (the All Apps panel's cells, M2 #9,
+     * leave the label two 16 dp lines and nothing more).
      */
     @JvmStatic
     fun fitsTwoLines(
@@ -48,7 +49,7 @@ object TwoLineLabels {
             .setEllipsize(TextUtils.TruncateAt.END)
             .setMaxLines(2)
             .build()
-            .height < height
+            .height <= height
 
     /**
      * Whether an All Apps cell has room for a second line of its name without growing. `BubbleTextView` centres the

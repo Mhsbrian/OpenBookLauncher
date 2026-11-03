@@ -109,8 +109,9 @@ public class TaskbarOverlayDragLayer extends
         // All Apps, and then there is no apps view.
         TaskbarAllAppsContainerView appsView = mContainer.getAppsView();
         if (appsView != null && !appsView.getSearchUiManager().isSearchQueryEmpty()) {
-            appsView.getSearchUiManager().resetSearch();
-            AllAppsPanel.onEscapeClearedSearch(mContainer, appsView); // OpenBook: keep typing
+            if (!AllAppsPanel.clearSearchOnEscape(mContainer, appsView)) { // OpenBook: keep typing
+                appsView.getSearchUiManager().resetSearch();
+            }
             return true;
         }
 
