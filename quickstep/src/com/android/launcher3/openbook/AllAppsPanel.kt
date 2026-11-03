@@ -116,6 +116,7 @@ class AllAppsPanel private constructor(
     private var closing = false
     private var escapeDown = false
     private var closeStart = 0L
+    private var closeFirstFrame = 0L
     private var closeFrom = floatArrayOf(1f, 1f, 0f) // alpha, scale, translationY when the close began
 
     init {
@@ -234,10 +235,12 @@ class AllAppsPanel private constructor(
         apply(0f, openScale, rise)
         openSpring?.cancel()
         val start = SystemClock.uptimeMillis()
+        var firstFrame = 0L
         openSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce(1f).setStiffness(panelStiffness).setDampingRatio(panelDamping)
             setMinimumVisibleChange(SpringAnimation.MIN_VISIBLE_CHANGE_SCALE)
             addUpdateListener { _, p, _ ->
+                if (firstFrame == 0L) firstFrame = SystemClock.uptimeMillis()
                 if (!closing) {
                     appsView.scaleX = openScale + (1f - openScale) * p
                     appsView.scaleY = appsView.scaleX
@@ -245,8 +248,10 @@ class AllAppsPanel private constructor(
                 }
             }
             addEndListener { _, canceled, _, _ ->
-                Log.d(TAG, "open: spring.panel ${if (canceled) "cut short" else "settled"} after " +
-                    "${SystemClock.uptimeMillis() - start} ms, ${panelHeight}px tall")
+                val now = SystemClock.uptimeMillis()
+                Log.d(TAG, "open: spring.panel ${if (canceled) "cut short" else "settled"} " +
+                    "${now - (if (firstFrame != 0L) firstFrame else start)} ms from its first frame, " +
+                    "${now - start} ms in all, ${panelHeight}px tall")
             }
             start()
         }
@@ -325,6 +330,7 @@ class AllAppsPanel private constructor(
         if (closing) return
         closing = true
         closeStart = SystemClock.uptimeMillis()
+        closeFirstFrame = 0L
         openSpring?.cancel()
         fade?.cancel()
         closeFrom = floatArrayOf(appsView.alpha, appsView.scaleX, appsView.translationY)
@@ -338,10 +344,19 @@ class AllAppsPanel private constructor(
         if (!toClosed || !closing) return
         val (a, s, y) = closeFrom
         apply(a * (1f - shift), s + (closeScale - s) * shift, y + (fall - y) * shift)
+        val now = SystemClock.uptimeMillis()
+        if (closeFirstFrame == 0L) closeFirstFrame = now
         if (shift >= 1f && closeStart != 0L) {
-            Log.d(TAG, "close: ${SystemClock.uptimeMillis() - closeStart} ms")
+            Log.d(TAG, "close: ${now - closeFirstFrame} ms from its first frame ($closeDurationMs ms set), " +
+                "${now - closeStart} ms in all")
             closeStart = 0L
         }
+    }
+
+    /** The sheet closed and is leaving its window. */
+    fun onClosed() {
+        if (closeStart != 0L) Log.d(TAG, "close: a cut") // Remove animations, or closed without animating
+        closeStart = 0L
     }
 
     private fun apply(alpha: Float, scale: Float, translationY: Float) {

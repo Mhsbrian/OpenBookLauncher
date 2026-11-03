@@ -184,6 +184,7 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
 
     @Override
     protected void onCloseComplete() {
+        if (mPanel != null) mPanel.onClosed(); // OpenBook
         mAllAppsCallbacks.onAllAppsTransitionEnd(false);
         super.onCloseComplete();
     }
