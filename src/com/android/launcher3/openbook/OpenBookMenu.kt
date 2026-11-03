@@ -25,6 +25,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowManager
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.core.graphics.ColorUtils
 import com.android.app.animation.Interpolators.EMPHASIZED_DECELERATE
@@ -213,7 +214,8 @@ object OpenBookMenu {
         isEnabled(context) && (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_F10)
 
     /** Whether the press that opens a menu now was a finger (48 dp rows), not a mouse, touchpad or pen. */
-    private fun openedByTouch(byKeyboard: Boolean) = !byKeyboard && downTouch
+    @JvmStatic
+    fun openedByTouch(byKeyboard: Boolean) = !byKeyboard && downTouch
 
     /** The last press on the screen, if it was over [view], else null. */
     private fun lastPress(view: View): AtPoint? {
@@ -305,6 +307,17 @@ object OpenBookMenu {
         private var pivotY = 0f
         private var dragLayer: BaseDragLayer<*>? = null
         private var pendingOpen: (() -> Unit)? = null
+        /** Shown in whatever window it has, after waiting [WAIT_MS] for that window to grow. */
+        private var forced = false
+        private val giveUpWaiting = Runnable {
+            val open = pendingOpen ?: return@Runnable
+            forced = true
+            Log.w(TAG, "menu: its window didn't grow in $WAIT_MS ms; shown in the window it has")
+            if (place()) {
+                pendingOpen = null
+                open()
+            }
+        }
         private val relayout = View.OnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
             if (r - l == or - ol && b - t == ob - ot) return@OnLayoutChangeListener
             // The window changed size (the taskbar's grows for a menu): place the menu again, and open it if it waited.
@@ -336,8 +349,8 @@ object OpenBookMenu {
         }
 
         /**
-         * Places the menu in [layer] and runs [open], once it fits: a menu opened from the keyboard on the taskbar
-         * comes before the taskbar's window has grown to the full screen, so it waits (invisible) for that layout.
+         * Places the menu in [layer] and runs [open]. A menu opened from the keyboard on the taskbar comes before the
+         * taskbar's window has grown to the full screen: it waits (invisible) for that layout, at most [WAIT_MS].
          */
         fun show(layer: BaseDragLayer<*>, open: () -> Unit) {
             dragLayer = layer
@@ -347,6 +360,7 @@ object OpenBookMenu {
             } else {
                 popup.visibility = View.INVISIBLE
                 pendingOpen = open
+                popup.postDelayed(giveUpWaiting, WAIT_MS)
                 Log.d(TAG, "menu waits for its window (${layer.width}x${layer.height})")
             }
         }
@@ -355,13 +369,16 @@ object OpenBookMenu {
         fun detach() {
             Log.d(TAG, "menu closed")
             dragLayer?.removeOnLayoutChangeListener(relayout)
+            popup.removeCallbacks(giveUpWaiting)
             dragLayer = null
             pendingOpen = null
         }
 
         /**
-         * Sizes and places the popup in its drag layer (its layout params set to a fixed position) and logs it.
-         * Returns false, placing nothing, when the drag layer is too small to hold it.
+         * Sizes and places the popup in its drag layer (its layout params set to a fixed position) and logs it. The
+         * menu is never taller than the room it has (above the bar for a taskbar icon's, between the bars
+         * otherwise): beyond that its rows scroll. Returns false, placing nothing, while its window is smaller than
+         * the screen and too small for it (the taskbar's, before it grows for the menu).
          */
         private fun place(): Boolean {
             val layer = dragLayer ?: return false
@@ -375,15 +392,25 @@ object OpenBookMenu {
                         max(insets.right, it.right), max(insets.bottom, it.bottom),
                     )
                 }
-            popup.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-            val w = popup.measuredWidth
-            val h = popup.measuredHeight
             val left = insets.left + t.margin
             val top = insets.top + t.margin
             val right = layer.width - insets.right - t.margin
             val bottom = layer.height - insets.bottom - t.margin
-            if (right - left < w || bottom - top < h) return false
             val o = IntArray(2).also { layer.getLocationOnScreen(it) }
+            val anchor = spec.anchor
+            val maxW = right - left
+            val maxH = if (anchor is AboveBar) anchor.barTop - o[1] - t.barGap - top else bottom - top
+            if (maxW <= 0 || maxH <= 0) return false
+            popup.measure(
+                View.MeasureSpec.makeMeasureSpec(maxW, View.MeasureSpec.AT_MOST),
+                View.MeasureSpec.makeMeasureSpec(maxH, View.MeasureSpec.AT_MOST),
+            )
+            val w = popup.measuredWidth
+            val h = popup.measuredHeight
+            val screen = context.getSystemService(WindowManager::class.java)?.maximumWindowMetrics?.bounds?.height()
+                ?: layer.height
+            if (!forced && h >= maxH && layer.height < screen) return false
+            val scrolls = h >= maxH
             var x: Int
             var y: Int
             when (val a = spec.anchor) {
@@ -435,7 +462,8 @@ object OpenBookMenu {
             popup.translationX = 0f
             popup.translationY = 0f
             Log.d(TAG, "menu at [${x + o[0]},${y + o[1]}][${x + o[0] + w},${y + o[1] + h}] on screen, " +
-                "${w}x$h, in a ${layer.width}x${layer.height} window, insets $insets, ${spec.kind}")
+                "${w}x$h, in a ${layer.width}x${layer.height} window, insets $insets, ${spec.kind}" +
+                if (scrolls) ", its rows scroll (at most $maxH px tall)" else "")
             return true
         }
 
@@ -498,7 +526,7 @@ object OpenBookMenu {
     fun styleViewPopup(popup: ViewGroup): Boolean {
         val context = popup.context
         if (!isEnabled(context)) return false
-        val t = Tokens(context)
+        val t = Tokens(context, openedByTouch(false))
         val glass = (hostOf(context) as? GlassHost)?.createMenuGlass(popup)
         if (glass != null) {
             glass.radius = t.radius
@@ -520,7 +548,7 @@ object OpenBookMenu {
     @JvmStatic
     fun styleViewRows(popup: ViewGroup): Boolean {
         if (!isEnabled(popup.context)) return false
-        styleViewRows(popup, Tokens(popup.context))
+        styleViewRows(popup, Tokens(popup.context, openedByTouch(false)))
         return true
     }
 
@@ -583,13 +611,13 @@ object OpenBookMenu {
     }
 
     /** The menu's tokens (res/values/openbook_tokens.xml) and the Material roles it uses. */
-    internal class Tokens(c: Context) {
+    internal class Tokens(c: Context, touch: Boolean = false) {
         private val res = c.resources
         val radius = res.getDimension(R.dimen.ob_mn_radius)
         val padding = res.getDimensionPixelSize(R.dimen.ob_mn_padding)
         val margin = res.getDimensionPixelSize(R.dimen.ob_mn_margin)
         val barGap = res.getDimensionPixelSize(R.dimen.ob_mn_bar_gap)
-        val row = res.getDimensionPixelSize(R.dimen.ob_mn_row)
+        val row = res.getDimensionPixelSize(if (touch) R.dimen.ob_mn_row_touch else R.dimen.ob_mn_row)
         val rowRadius = res.getDimension(R.dimen.ob_mn_row_radius)
         val rowPadding = res.getDimensionPixelSize(R.dimen.ob_mn_row_padding)
         val iconGap = res.getDimensionPixelSize(R.dimen.ob_mn_icon_gap)
@@ -610,6 +638,9 @@ object OpenBookMenu {
         val onSurfaceVariant = c.getColor(R.color.materialColorOnSurfaceVariant)
         val primary = c.getColor(R.color.materialColorPrimary)
     }
+
+    /** How long a menu waits for its window to grow before it is shown in the window it has. */
+    private const val WAIT_MS = 1000L
 
     /** Google Sans Flex's body family (OpenBook's docs/googlebook-ui.md §2.1); the default sans-serif without it. */
     internal const val FAMILY = "variable-body-medium"

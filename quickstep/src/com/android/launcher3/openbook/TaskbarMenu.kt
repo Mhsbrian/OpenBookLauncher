@@ -51,7 +51,7 @@ object TaskbarMenu {
                 kind = OpenBookMenu.Kind.APP,
                 anchor = OpenBookMenu.anchorAtIcon(icon, byKeyboard),
                 byKeyboard = byKeyboard,
-                byTouch = false,
+                byTouch = OpenBookMenu.openedByTouch(byKeyboard),
                 arrange = { items ->
                     val (close, rest) = items.partition { it.labelResId == R.string.close_app_taskbar }
                     listOf(rest, close)
@@ -92,7 +92,7 @@ object TaskbarMenu {
             kind = OpenBookMenu.Kind.TASKBAR,
             anchor = OpenBookMenu.AboveBar(r.centerX(), barTop),
             byKeyboard = byKeyboard,
-            byTouch = false,
+            byTouch = OpenBookMenu.openedByTouch(byKeyboard),
             header = header,
             windows = windows,
             arrange = { items -> arrange(items, windows.isNotEmpty()) },

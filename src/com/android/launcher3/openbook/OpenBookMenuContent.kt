@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -91,7 +93,8 @@ import androidx.compose.ui.text.font.Typeface as ComposeTypeface
  *
  * In order: the taskbar menu's header and the app's windows, the app's shortcuts ([deepShortcuts]; null while they
  * load), then [items] grouped by the spec, with a divider between groups. [onShown] runs once, after the first
- * composition, so the popup can be measured and placed. [focusSignal] rises when a menu opened from the keyboard is shown:
+ * composition, so the popup can be measured and placed; the popup bounds its height to the room it has, and the rows
+ * scroll beyond that. [focusSignal] rises when a menu opened from the keyboard is shown:
  * its first row takes the focus.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -160,6 +163,9 @@ fun OpenBookMenuContent(
                 requesters[target].requestFocus()
                 true
             }
+            // A menu taller than its room (many windows on a small screen) is bounded by its popup and scrolls; a
+            // focused row brings itself into view.
+            .verticalScroll(rememberScrollState())
     ) {
         if (spec.header != null || spec.windows.isNotEmpty()) {
             divider()
