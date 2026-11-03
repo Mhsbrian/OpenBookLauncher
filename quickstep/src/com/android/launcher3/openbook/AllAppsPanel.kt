@@ -116,7 +116,7 @@ class AllAppsPanel private constructor(
     private var closing = false
     private var escapeDown = false
     private var closeStart = 0L
-    private var closeFirstFrame = 0L
+    private var closeFrames = FrameLog()
     private var closeFrom = floatArrayOf(1f, 1f, 0f) // alpha, scale, translationY when the close began
 
     init {
@@ -235,12 +235,12 @@ class AllAppsPanel private constructor(
         apply(0f, openScale, rise)
         openSpring?.cancel()
         val start = SystemClock.uptimeMillis()
-        var firstFrame = 0L
+        val frames = FrameLog()
         openSpring = SpringAnimation(FloatValueHolder(0f)).apply {
             spring = SpringForce(1f).setStiffness(panelStiffness).setDampingRatio(panelDamping)
             setMinimumVisibleChange(SpringAnimation.MIN_VISIBLE_CHANGE_SCALE)
             addUpdateListener { _, p, _ ->
-                if (firstFrame == 0L) firstFrame = SystemClock.uptimeMillis()
+                frames.frame()
                 if (!closing) {
                     appsView.scaleX = openScale + (1f - openScale) * p
                     appsView.scaleY = appsView.scaleX
@@ -248,10 +248,9 @@ class AllAppsPanel private constructor(
                 }
             }
             addEndListener { _, canceled, _, _ ->
-                val now = SystemClock.uptimeMillis()
-                Log.d(TAG, "open: spring.panel ${if (canceled) "cut short" else "settled"} " +
-                    "${now - (if (firstFrame != 0L) firstFrame else start)} ms from its first frame, " +
-                    "${now - start} ms in all, ${panelHeight}px tall")
+                Log.d(TAG, "open: spring.panel ($panelStiffness, $panelDamping) ${if (canceled) "cut short" else
+                    "settled"} ${frames.span()} ms from its first frame over ${frames.count} frames (longest " +
+                    "${frames.longest} ms), ${SystemClock.uptimeMillis() - start} ms in all, ${panelHeight}px tall")
             }
             start()
         }
@@ -330,7 +329,7 @@ class AllAppsPanel private constructor(
         if (closing) return
         closing = true
         closeStart = SystemClock.uptimeMillis()
-        closeFirstFrame = 0L
+        closeFrames = FrameLog()
         openSpring?.cancel()
         fade?.cancel()
         closeFrom = floatArrayOf(appsView.alpha, appsView.scaleX, appsView.translationY)
@@ -344,11 +343,11 @@ class AllAppsPanel private constructor(
         if (!toClosed || !closing) return
         val (a, s, y) = closeFrom
         apply(a * (1f - shift), s + (closeScale - s) * shift, y + (fall - y) * shift)
-        val now = SystemClock.uptimeMillis()
-        if (closeFirstFrame == 0L) closeFirstFrame = now
+        closeFrames.frame()
         if (shift >= 1f && closeStart != 0L) {
-            Log.d(TAG, "close: ${now - closeFirstFrame} ms from its first frame ($closeDurationMs ms set), " +
-                "${now - closeStart} ms in all")
+            Log.d(TAG, "close: ${closeFrames.span()} ms from its first frame over ${closeFrames.count} frames " +
+                "(longest ${closeFrames.longest} ms; $closeDurationMs ms set), " +
+                "${SystemClock.uptimeMillis() - closeStart} ms in all")
             closeStart = 0L
         }
     }
@@ -369,6 +368,23 @@ class AllAppsPanel private constructor(
     private fun setAlpha(alpha: Float) {
         appsView.alpha = alpha
         glass.panelAlpha = alpha // the blur region doesn't follow the view's alpha
+    }
+
+    /** When an animation's frames came: how many, over how long, and the longest gap (for the log). */
+    private class FrameLog {
+        var count = 0
+        var longest = 0L
+        private var first = 0L
+        private var last = 0L
+
+        fun frame() {
+            val now = SystemClock.uptimeMillis()
+            if (count == 0) first = now else longest = maxOf(longest, now - last)
+            last = now
+            count++
+        }
+
+        fun span() = last - first
     }
 
     /** The glass: shadow, the platform's blur behind the panel, the tint, the outline and the lit top edge. */
