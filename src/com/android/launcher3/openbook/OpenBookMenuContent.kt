@@ -235,6 +235,9 @@ fun OpenBookMenuContent(
     val signal = focusSignal.value
     LaunchedEffect(signal) {
         if (signal > 0) {
+            // Shift+F10 and the menu key aren't navigation keys, so the window can still be in touch mode, where
+            // rows don't take focus: leave it, as the keyboard would.
+            if (view.isInTouchMode) view.requestFocusFromTouch()
             val first = requesters.firstOrNull()
             first?.requestFocus()
             withFrameNanos {}
