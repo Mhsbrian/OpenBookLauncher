@@ -1,6 +1,6 @@
 # OpenBook Launcher roadmap
 
-As of 2026-11-02 (ANAL-352). The goal is a desktop launcher that feels made for a laptop: quiet by default, fast
+As of 2026-11-03 (ANAL-352; M2 revised in ANAL-364). The goal is a desktop launcher that feels made for a laptop: quiet by default, fast
 from the keyboard, precise with a touchpad, and designed to the same standard as the rest of OpenBook. Each item is
 one pull request with its VM test. Order within a milestone is the order of work. The owner reorders freely.
 
@@ -29,13 +29,15 @@ Legend: **code** = new code in this fork; **flag** = AOSP 17 already has the cod
 
 ## M2: high design
 
+The design is OpenBook's `docs/launcher-design.md` (ANAL-364): every token, state and hook point, a prototype and renders. Items 8 to 12 build it, in the order 8, 9, 11, 10, 12.
+
 | # | Item | Kind | Notes |
 |---|---|---|---|
-| 8 | **Taskbar redesign:** our own all-apps button (a pill), focused and running indicators, spacing on a 4 dp grid | code | |
-| 9 | **All Apps as a desktop panel:** centred card, frosted over a sharp wallpaper, a type scale in Google Sans Flex, keyboard focus rings | code + value | Builds on `reduce_workspace_blur_usage` (OpenBook PR #158) |
-| 10 | **Overview for desks:** wallpaper behind desktop tiles, blurred recents window | flag | `enable_overview_desktop_tile_wallpaper_background`, `enable_recents_window_blur`, measured on the 890M |
-| 11 | **Context menus restyled:** desktop right-click (wallpaper, widgets, display, launcher settings) and taskbar icon menus (pin, new window, close all windows) | code | |
-| 12 | **Motion pass:** one set of durations and curves for open, minimize, restore and panel transitions | code | |
+| 8 | **Taskbar redesign:** our own all-apps button (a pill), focused and running indicators, spacing on a 4 dp grid | code | Glass bar, still 56 dp. AOSP 17's `RunningAppState` has no "in front" state or window count; this adds both (design §2) |
+| 9 | **All Apps as a desktop panel:** centred card, frosted over a sharp wallpaper, a type scale in Google Sans Flex, keyboard focus rings | code + value | Builds on `reduce_workspace_blur_usage` (OpenBook PR #158). Replaces the taskbar's full-width bottom sheet; the blur is the panel's own, not the overlay window's (design §3) |
+| 10 | **Overview for desks:** wallpaper behind desk tiles, a blurred backdrop | code | Not a flag (2026-11-03): `enable_overview_desktop_tile_wallpaper_background` has no reader, and `enable_recents_window_blur` acts only in `RecentsWindowManager`, which runs Overview on external displays only while `enable_launcher_overview_in_window` is off. Overview's own blur is off whenever `all_apps_surface` is on (`LauncherDepthController`). Our code draws the wallpaper in `DesktopTaskView` and blurs the Overview state; measured on the 890M (design §5) |
+| 11 | **Context menus restyled:** desktop right-click (wallpaper, widgets, display, launcher settings) and taskbar icon menus (pin, new window, close all windows) | code | Both menus are AOSP 17's Compose popup, so one restyle reaches both (design §4) |
+| 12 | **Motion pass:** one set of durations and curves for open, minimize, restore and panel transitions | code | The launcher's own animations. A window's open, minimize and restore are WM Shell's (SystemUI), so matching them is a separate OpenBook change (design §7) |
 
 ## M3: smarter, without Google services
 
