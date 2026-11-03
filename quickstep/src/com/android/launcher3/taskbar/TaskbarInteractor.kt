@@ -24,6 +24,7 @@ import androidx.annotation.AnyThread
 import com.android.launcher3.Flags.enableTaskbarUiThread
 import com.android.launcher3.LauncherState
 import com.android.launcher3.model.data.ItemInfo
+import com.android.launcher3.openbook.OpenBookTaskbar
 import com.android.launcher3.openbook.TypeToSearch
 import com.android.launcher3.util.AsyncView
 import com.android.launcher3.util.Executors.MAIN_EXECUTOR
@@ -116,6 +117,13 @@ class TaskbarInteractor(private val taskbarUIController: TaskbarUIController) {
     fun showEduOnAppLaunch() {
         if (taskbarUIController is LauncherTaskbarUIController) {
             getTaskbarUiThread().execute { taskbarUIController.showEduOnAppLaunch() }
+        }
+    }
+
+    /** OpenBook: keyboard focus into the taskbar from the desktop's Tab (openbook/OpenBookTaskbar). */
+    fun focusTaskbar(forward: Boolean) {
+        getTaskbarUiThread().execute {
+            OpenBookTaskbar.focusFromKeyboard(taskbarUIController.rootView, forward)
         }
     }
 

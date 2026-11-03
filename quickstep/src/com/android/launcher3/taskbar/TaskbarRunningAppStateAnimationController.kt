@@ -96,6 +96,9 @@ private val LINE_WIDTH_PROPERTY =
 /** Manages Taskbar [BubbleTextView] animations from changes in [RunningAppState]. */
 class TaskbarRunningAppStateAnimationController(context: Context) {
 
+    /** OpenBook: the taskbar's own targets draw and animate their state (openbook/OpenBookTaskbar); no bounce. */
+    var openBookStates = false
+
     /** Animating [BubbleTextView] instances, where invoking each value cancels the animation. */
     private val runningAnimations = mutableMapOf<BubbleTextView, () -> Unit>()
 
@@ -131,7 +134,7 @@ class TaskbarRunningAppStateAnimationController(context: Context) {
 
         cancelAnimation(btv)
         btv.runningAppState = runningState
-        if (!animate) return applyRunningState(btv)
+        if (!animate || openBookStates) return applyRunningState(btv)
 
         val isPinnedApp = btv.tag is TaskItemInfo
         if (

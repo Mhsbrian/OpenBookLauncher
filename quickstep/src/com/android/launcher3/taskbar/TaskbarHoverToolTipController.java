@@ -38,6 +38,7 @@ import com.android.launcher3.R;
 import com.android.launcher3.Utilities;
 import com.android.launcher3.apppairs.AppPairIcon;
 import com.android.launcher3.folder.FolderIcon;
+import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.views.ArrowTipView;
 
 /**
@@ -53,6 +54,9 @@ public class TaskbarHoverToolTipController implements View.OnHoverListener {
     private final View mHoverView;
     private final ArrowTipView mHoverToolTipView;
     private final int mYOffset;
+    // OpenBook's taskbar (openbook/OpenBookTaskbar): the restyled tooltip, after 500 ms of hover.
+    private final boolean mOpenBook;
+    private final Runnable mRevealHoverToolTip = this::maybeRevealHoverToolTip;
 
     public TaskbarHoverToolTipController(TaskbarActivityContext activity, ViewGroup container,
             View hoverView) {
@@ -71,13 +75,17 @@ public class TaskbarHoverToolTipController implements View.OnHoverListener {
         mHoverToolTipView.findViewById(R.id.text).setPadding(horizontalPadding, verticalPadding,
                 horizontalPadding, verticalPadding);
         mHoverToolTipView.setAlpha(0);
-        mYOffset = arrowContextWrapper.getResources().getDimensionPixelSize(
-                R.dimen.taskbar_tooltip_y_offset);
+        mOpenBook = OpenBookTaskbar.isEnabled(activity);
+        if (mOpenBook) OpenBookTaskbar.styleTooltip(mHoverToolTipView);
+        mYOffset = mOpenBook ? OpenBookTaskbar.tooltipGap(activity)
+                : arrowContextWrapper.getResources().getDimensionPixelSize(
+                        R.dimen.taskbar_tooltip_y_offset);
 
         AnimatorSet hoverOpenAnimator = new AnimatorSet();
         ObjectAnimator alphaOpenAnimator = ObjectAnimator.ofFloat(mHoverToolTipView, ALPHA, 0f, 1f);
         hoverOpenAnimator.play(alphaOpenAnimator);
-        hoverOpenAnimator.setDuration(HOVER_TOOL_TIP_REVEAL_DURATION);
+        hoverOpenAnimator.setDuration(mOpenBook ? OpenBookTaskbar.tooltipFadeMs(activity)
+                : HOVER_TOOL_TIP_REVEAL_DURATION);
         mHoverToolTipView.setCustomOpenAnimation(hoverOpenAnimator);
 
         mHoverToolTipView.addOnLayoutChangeListener(
@@ -91,10 +99,16 @@ public class TaskbarHoverToolTipController implements View.OnHoverListener {
     public boolean onHover(View v, MotionEvent event) {
         // If hover leaves a taskbar icon animate the tooltip closed.
         if (event.getAction() == ACTION_HOVER_EXIT) {
+            mContainer.removeCallbacks(mRevealHoverToolTip); // OpenBook
             mHoverToolTipView.close(/* animate= */ false);
             mActivity.setAutohideSuspendFlag(FLAG_AUTOHIDE_SUSPEND_HOVERING_ICONS, false);
         } else if (event.getAction() == ACTION_HOVER_ENTER) {
-            maybeRevealHoverToolTip();
+            if (mOpenBook) { // OpenBook: after 500 ms of hover
+                mContainer.removeCallbacks(mRevealHoverToolTip);
+                mContainer.postDelayed(mRevealHoverToolTip, OpenBookTaskbar.tooltipDelayMs(mActivity));
+            } else {
+                maybeRevealHoverToolTip();
+            }
             mActivity.setAutohideSuspendFlag(FLAG_AUTOHIDE_SUSPEND_HOVERING_ICONS, true);
         }
         return false;

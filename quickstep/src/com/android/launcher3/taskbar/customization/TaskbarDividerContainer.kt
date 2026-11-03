@@ -20,11 +20,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color.TRANSPARENT
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import androidx.core.view.setPadding
 import com.android.launcher3.R
 import com.android.launcher3.Utilities.dpToPx
+import com.android.launcher3.openbook.OpenBookTaskbar
 import com.android.launcher3.taskbar.TaskbarActivityContext
 import com.android.launcher3.taskbar.TaskbarViewCallbacks
 import com.android.launcher3.views.ActivityContext
@@ -37,9 +39,15 @@ class TaskbarDividerContainer
 constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) :
     IconButtonView(context, attrs), TaskbarContainer {
     private val activityContext: TaskbarActivityContext = ActivityContext.lookupContext(context)
+    /** OpenBook's divider (openbook/OpenBookTaskbar draws it): a 1 dp line with 8 dp each side. */
+    private val openBook = OpenBookTaskbar.isEnabled(activityContext)
 
     override val spaceNeeded: Int
         get() {
+            if (openBook) {
+                return resources.getDimensionPixelSize(R.dimen.ob_tb_divider_width) +
+                    2 * resources.getDimensionPixelSize(R.dimen.ob_tb_divider_margin)
+            }
             return taskbarIconViewSize
         }
     override val taskbarIconViewSize =
@@ -54,6 +62,16 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
     fun setUpIcon() {
+        if (openBook) {
+            backgroundTintList = ColorStateList.valueOf(TRANSPARENT)
+            setPadding(0)
+            setIconDrawable(ColorDrawable(TRANSPARENT))
+            width = spaceNeeded
+            height = taskbarIconViewSize
+            // Decorative: keyboard focus skips it, as the design's focus order does.
+            isFocusable = false
+            return
+        }
         backgroundTintList = ColorStateList.valueOf(TRANSPARENT)
         val drawable = getTaskbarDividerIcon()
         setPadding(taskbarIconViewPadding)

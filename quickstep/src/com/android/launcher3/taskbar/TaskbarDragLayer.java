@@ -37,6 +37,8 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.android.app.viewcapture.ViewCaptureFactory;
 import com.android.launcher3.AbstractFloatingView;
+import com.android.launcher3.openbook.OpenBookTaskbar;
+import com.android.launcher3.openbook.TaskbarGlass;
 import com.android.launcher3.testing.TestLogging;
 import com.android.launcher3.testing.shared.TestProtocol;
 import com.android.launcher3.util.MultiPropertyFactory;
@@ -98,6 +100,9 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
             int defStyleAttr, int defStyleRes) {
         super(context, attrs, 1 /* alphaChannelCount */);
         mBackgroundRenderer = new TaskbarBackgroundRenderer(mContainer);
+        if (OpenBookTaskbar.isEnabled(mContainer)) {
+            mBackgroundRenderer.setGlass(new TaskbarGlass(this)); // OpenBook
+        }
 
         mTaskbarBackgroundAlpha = new MultiPropertyFactory<>(this, BG_ALPHA, INDEX_COUNT,
                 (a, b) -> a * b, 1f);
@@ -278,7 +283,14 @@ public class TaskbarDragLayer extends BaseDragLayer<TaskbarActivityContext> {
                 return true;
             }
         }
+        if (OpenBookTaskbar.onTaskbarKeyEvent(mContainer, event)) return true; // OpenBook
         return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        OpenBookTaskbar.onTaskbarWindowFocusChanged(mContainer, hasWindowFocus); // OpenBook
     }
 
     /**

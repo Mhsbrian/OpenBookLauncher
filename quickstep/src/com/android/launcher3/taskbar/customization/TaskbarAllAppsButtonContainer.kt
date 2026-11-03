@@ -20,6 +20,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color.TRANSPARENT
+import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -29,6 +30,7 @@ import androidx.annotation.DrawableRes
 import androidx.core.view.setPadding
 import com.android.launcher3.R
 import com.android.launcher3.Utilities.dpToPx
+import com.android.launcher3.openbook.OpenBookTaskbar
 import com.android.launcher3.taskbar.TaskbarActivityContext
 import com.android.launcher3.taskbar.TaskbarViewCallbacks
 import com.android.launcher3.util.Executors.getTaskbarUiThread
@@ -45,6 +47,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     IconButtonView(context, attrs), TaskbarContainer {
 
     private val activityContext: TaskbarActivityContext = ActivityContext.lookupContext(context)
+    /** OpenBook's apps pill (openbook/OpenBookTaskbar draws it): 56 dp wide, the target row's height. */
+    private val openBook = OpenBookTaskbar.isEnabled(activityContext)
     private var allAppsTouchTriggered = false
     private var allAppsTouchRunnable: Runnable? = null
     private var allAppsButtonTouchDelayMs: Long = ViewConfiguration.getLongPressTimeout().toLong()
@@ -53,6 +57,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     override val spaceNeeded: Int
         get() {
+            if (openBook) return resources.getDimensionPixelSize(R.dimen.ob_tb_pill_width)
             return taskbarIconViewSize
         }
 
@@ -69,6 +74,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     @SuppressLint("UseCompatLoadingForDrawables", "ResourceAsColor")
     private fun setUpIcon() {
+        if (openBook) {
+            backgroundTintList = ColorStateList.valueOf(TRANSPARENT)
+            setPadding(taskbarIconViewPadding)
+            setIconDrawable(ColorDrawable(TRANSPARENT))
+            width = spaceNeeded
+            height = taskbarIconViewSize
+            return
+        }
         val drawable =
             resources.getDrawable(
                 getAllAppsButton(activityContext.taskbarFeatureEvaluator.isTransient)

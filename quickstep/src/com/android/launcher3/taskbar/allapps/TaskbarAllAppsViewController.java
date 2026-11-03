@@ -25,6 +25,7 @@ import com.android.launcher3.AbstractFloatingView;
 import com.android.launcher3.allapps.AllAppsTransitionListener;
 import com.android.launcher3.anim.PendingAnimation;
 import com.android.launcher3.appprediction.AppsDividerView;
+import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.openbook.TypeToSearch;
 import com.android.launcher3.taskbar.NavbarButtonsViewController;
 import com.android.launcher3.taskbar.TaskbarControllers;
@@ -135,6 +136,7 @@ final class TaskbarAllAppsViewController {
         @Override
         public void onAllAppsTransitionStart(boolean toAllApps) {
             mSearchSessionController.onAllAppsTransitionStart(toAllApps);
+            OpenBookTaskbar.onAllAppsTransition(mTaskbarControllers, toAllApps); // OpenBook: the pill
             if (toAllApps
                     && mShowKeyboard
                     && mAppsView.getSearchUiManager().getEditText() != null) {

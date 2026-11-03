@@ -81,6 +81,7 @@ import com.android.launcher3.deviceprofile.TaskbarProfile;
 import com.android.launcher3.model.IModelWriter;
 import com.android.launcher3.model.data.ItemInfo;
 import com.android.launcher3.model.data.TaskItemInfo;
+import com.android.launcher3.openbook.OpenBookTaskbar;
 import com.android.launcher3.taskbar.bubbles.BubbleBarController;
 import com.android.launcher3.taskbar.bubbles.BubbleBarViewController;
 import com.android.launcher3.taskbar.bubbles.BubbleControllers;
@@ -244,6 +245,8 @@ public class TaskbarViewController implements TaskbarControllers.LoggableTaskbar
     private final float mTaskbarLeftRightMargin;
 
     private final TaskbarRunningAppStateAnimationController mRunningStateController;
+    // OpenBook's taskbar (openbook/OpenBookTaskbar), on the desktop form factor's persistent taskbar.
+    private @Nullable OpenBookTaskbar mOpenBookTaskbar;
 
     private final OverflownAppsContainerController mOverflownAppsContainerController;
 
@@ -306,6 +309,10 @@ public class TaskbarViewController implements TaskbarControllers.LoggableTaskbar
         TaskbarViewCallbacks viewCallbacks = new TaskbarViewCallbacks(
                 mActivity, mControllers, mTaskbarView);
         mTaskbarView.init(viewCallbacks);
+        if (OpenBookTaskbar.isEnabled(mActivity)) { // OpenBook
+            mOpenBookTaskbar = new OpenBookTaskbar(mActivity, mControllers, mTaskbarView);
+            mRunningStateController.setOpenBookStates(true);
+        }
         // Pinning popup feature availability depends on taskbar controllers, wait for the
         // controllers state initialization before evaluating the feature.
         mControllers.runAfterInit(mTaskbarView::updatePinningPopupEventHandlers);
@@ -452,6 +459,12 @@ public class TaskbarViewController implements TaskbarControllers.LoggableTaskbar
         mTaskbarView.removeOnLayoutChangeListener(mTaskbarViewLayoutChangeListener);
         mActivity.removeOnDeviceProfileChangeListener(mDeviceProfileChangeListener);
         mRunningStateController.onDestroy();
+        if (mOpenBookTaskbar != null) mOpenBookTaskbar.onDestroy(); // OpenBook
+    }
+
+    /** OpenBook's taskbar (openbook/OpenBookTaskbar), or null where AOSP's taskbar is used. */
+    public @Nullable OpenBookTaskbar getOpenBookTaskbar() {
+        return mOpenBookTaskbar;
     }
 
     /**
@@ -917,10 +930,9 @@ public class TaskbarViewController implements TaskbarControllers.LoggableTaskbar
     }
 
     private void updateRunningState(BubbleTextView btv) {
-        mRunningStateController.updateRunningState(
-                btv,
-                getRunningAppState(btv),
-                /* animate = */ mTaskbarView.getLayoutTransition() != null);
+        boolean animate = mTaskbarView.getLayoutTransition() != null;
+        mRunningStateController.updateRunningState(btv, getRunningAppState(btv), animate);
+        if (mOpenBookTaskbar != null) mOpenBookTaskbar.update(btv, animate); // OpenBook
     }
 
     private BubbleTextView.RunningAppState getRunningAppState(BubbleTextView btv) {
@@ -1532,6 +1544,7 @@ public class TaskbarViewController implements TaskbarControllers.LoggableTaskbar
     @Override
     public void dumpLogs(String prefix, PrintWriter pw) {
         pw.println(prefix + "TaskbarViewController:");
+        if (mOpenBookTaskbar != null) mOpenBookTaskbar.dump(prefix + "\t", pw); // OpenBook
         pw.println(prefix + "\tignoreTaskbarIconCount=" + mTaskbarView.getIgnoreTaskbarIconCount());
         mTaskbarIconAlpha.dump(
                 prefix + "\t",
