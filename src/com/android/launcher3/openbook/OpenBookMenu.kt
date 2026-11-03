@@ -92,10 +92,14 @@ object OpenBookMenu {
 
     sealed interface Anchor
 
-    /** At a point of the drag layer: the menu opens down and right of it, flipping at the edges. */
+    /**
+     * At a point on the screen: the menu opens down and right of it, flipping at the edges. Anchors are in screen
+     * coordinates, because a menu's window can change size (and so its origin) as the menu opens: the taskbar's
+     * window grows to the full screen for a menu.
+     */
     data class AtPoint(val x: Int, val y: Int) : Anchor
 
-    /** Centred over [centerX], its bottom 8 dp above [barTop] (drag layer coordinates). */
+    /** Centred over [centerX], its bottom 8 dp above [barTop] (screen coordinates). */
     data class AboveBar(val centerX: Int, val barTop: Int) : Anchor
 
     /** In the middle of the drag layer (the menu key with nothing focused). */
@@ -210,27 +214,33 @@ object OpenBookMenu {
     /** Whether the press that opens a menu now was a finger (48 dp rows), not a mouse, touchpad or pen. */
     private fun openedByTouch(byKeyboard: Boolean) = !byKeyboard && downTouch
 
-    /** The last press in [dragLayer]'s coordinates, if it was over [view] (or [view] is null), else null. */
-    private fun lastPress(dragLayer: View, view: View?): IntArray? {
+    /** The last press on the screen, if it was over [view], else null. */
+    private fun lastPress(view: View): AtPoint? {
         if (downTime == 0L) return null
-        val origin = IntArray(2).also { dragLayer.getLocationOnScreen(it) }
-        val p = intArrayOf((downRawX - origin[0]).roundToInt(), (downRawY - origin[1]).roundToInt())
-        if (view != null) {
-            val r = Rect().also { view.getGlobalVisibleRect(it) }
-            if (!r.contains(downRawX.roundToInt(), downRawY.roundToInt())) return null
-        }
-        return p
+        val p = AtPoint(downRawX.roundToInt(), downRawY.roundToInt())
+        return if (screenRect(view).contains(p.x, p.y)) p else null
+    }
+
+    /** [view]'s bounds on the screen. */
+    @JvmStatic
+    fun screenRect(view: View): Rect {
+        val o = IntArray(2).also { view.getLocationOnScreen(it) }
+        return Rect(o[0], o[1], o[0] + view.width, o[1] + view.height)
     }
 
     // ---- Specs ----
 
-    /** The desktop's menu, opened at ([x], [y]) of the drag layer, or from the keyboard ([x] < 0) in the middle. */
+    /**
+     * The desktop's menu, opened at ([x], [y]) of [launcher]'s drag layer, or from the keyboard ([x] < 0) in the
+     * middle.
+     */
     @JvmStatic
-    fun desktop(x: Float, y: Float): Spec {
+    fun desktop(launcher: ActivityContext, x: Float, y: Float): Spec {
         val byKeyboard = x < 0 || y < 0 || openingFromKeyboard
+        val o = IntArray(2).also { launcher.dragLayer.getLocationOnScreen(it) }
         return Spec(
             kind = Kind.DESKTOP,
-            anchor = if (byKeyboard) Centered else AtPoint(x.roundToInt(), y.roundToInt()),
+            anchor = if (byKeyboard) Centered else AtPoint(o[0] + x.roundToInt(), o[1] + y.roundToInt()),
             byKeyboard = byKeyboard,
             byTouch = openedByTouch(byKeyboard),
             arrange = { items ->
@@ -268,18 +278,16 @@ object OpenBookMenu {
      * icon when opened from the keyboard.
      */
     @JvmStatic
-    fun app(context: ActivityContext, icon: View): Spec {
+    fun app(icon: View): Spec {
         val byKeyboard = openingFromKeyboard
-        return Spec(Kind.APP, anchorAtIcon(context, icon, byKeyboard), byKeyboard, openedByTouch(byKeyboard))
+        return Spec(Kind.APP, anchorAtIcon(icon, byKeyboard), byKeyboard, openedByTouch(byKeyboard))
     }
 
     /** At the last press when it was over [icon]; otherwise (the keyboard) under [icon]'s bottom left. */
     @JvmStatic
-    fun anchorAtIcon(context: ActivityContext, icon: View, byKeyboard: Boolean): Anchor {
-        val dragLayer = context.dragLayer
-        if (!byKeyboard) lastPress(dragLayer, icon)?.let { return AtPoint(it[0], it[1]) }
-        val r = Rect()
-        dragLayer.getDescendantRectRelativeToSelf(icon, r)
+    fun anchorAtIcon(icon: View, byKeyboard: Boolean): Anchor {
+        if (!byKeyboard) lastPress(icon)?.let { return it }
+        val r = screenRect(icon)
         return AtPoint(r.left, r.bottom)
     }
 
@@ -294,6 +302,20 @@ object OpenBookMenu {
             (hostOf(context) as? GlassHost)?.createMenuGlass(popup)
         private var pivotX = 0f
         private var pivotY = 0f
+        private var dragLayer: BaseDragLayer<*>? = null
+        private var pendingOpen: (() -> Unit)? = null
+        private val relayout = View.OnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
+            if (r - l == or - ol && b - t == ob - ot) return@OnLayoutChangeListener
+            // The window changed size (the taskbar's grows for a menu): place the menu again, and open it if it waited.
+            popup.post {
+                val fits = place()
+                val open = pendingOpen
+                if (fits && open != null) {
+                    pendingOpen = null
+                    open()
+                }
+            }
+        }
 
         init {
             if (glass != null) {
@@ -312,47 +334,80 @@ object OpenBookMenu {
             Log.d(TAG, "menu: $spec, glass ${if (glass == null) "none (tint)" else "on"}")
         }
 
-        /** Sizes and places the popup in [dragLayer] (its layout params set to a fixed position), and logs it. */
-        fun place(dragLayer: ViewGroup, insets: Rect) {
+        /**
+         * Places the menu in [layer] and runs [open], once it fits: a menu opened from the keyboard on the taskbar
+         * comes before the taskbar's window has grown to the full screen, so it waits (invisible) for that layout.
+         */
+        fun show(layer: BaseDragLayer<*>, open: () -> Unit) {
+            dragLayer = layer
+            layer.addOnLayoutChangeListener(relayout)
+            if (place()) {
+                open()
+            } else {
+                popup.visibility = View.INVISIBLE
+                pendingOpen = open
+                Log.d(TAG, "menu waits for its window (${layer.width}x${layer.height})")
+            }
+        }
+
+        /** The menu closed: stop following its window. */
+        fun detach() {
+            dragLayer?.removeOnLayoutChangeListener(relayout)
+            dragLayer = null
+            pendingOpen = null
+        }
+
+        /**
+         * Sizes and places the popup in its drag layer (its layout params set to a fixed position) and logs it.
+         * Returns false, placing nothing, when the drag layer is too small to hold it.
+         */
+        private fun place(): Boolean {
+            val layer = dragLayer ?: return false
+            val insets = layer.insets
             popup.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
             val w = popup.measuredWidth
             val h = popup.measuredHeight
             val left = insets.left + t.margin
             val top = insets.top + t.margin
-            val right = dragLayer.width - insets.right - t.margin
-            val bottom = dragLayer.height - insets.bottom - t.margin
+            val right = layer.width - insets.right - t.margin
+            val bottom = layer.height - insets.bottom - t.margin
+            if (right - left < w || bottom - top < h) return false
+            val o = IntArray(2).also { layer.getLocationOnScreen(it) }
             var x: Int
             var y: Int
             when (val a = spec.anchor) {
                 is AtPoint -> {
-                    x = a.x
-                    y = a.y
+                    val ax = a.x - o[0]
+                    val ay = a.y - o[1]
+                    x = ax
+                    y = ay
                     pivotX = 0f
                     pivotY = 0f
                     if (x + w > right) {
-                        x = a.x - w
+                        x = ax - w
                         pivotX = w.toFloat()
                     }
                     if (y + h > bottom) {
-                        y = a.y - h
+                        y = ay - h
                         pivotY = h.toFloat()
                     }
                 }
                 is AboveBar -> {
-                    x = a.centerX - w / 2
-                    y = a.barTop - t.barGap - h
+                    x = a.centerX - o[0] - w / 2
+                    y = a.barTop - o[1] - t.barGap - h
                     pivotY = h.toFloat()
                 }
                 Centered -> {
-                    x = (dragLayer.width - w) / 2
-                    y = (dragLayer.height - h) / 2
+                    x = (layer.width - w) / 2
+                    y = (layer.height - h) / 2
                     pivotY = h / 2f
                 }
             }
             x = max(left, min(x, right - w))
             y = max(top, min(y, bottom - h))
-            if (spec.anchor is AboveBar) pivotX = (spec.anchor.centerX - x).toFloat().coerceIn(0f, w.toFloat())
-            if (spec.anchor == Centered) pivotX = w / 2f
+            val a = spec.anchor
+            if (a is AboveBar) pivotX = (a.centerX - o[0] - x).toFloat().coerceIn(0f, w.toFloat())
+            if (a == Centered) pivotX = w / 2f
             val lp = popup.layoutParams
             if (lp is BaseDragLayer.LayoutParams) {
                 lp.customPosition = true
@@ -368,8 +423,9 @@ object OpenBookMenu {
             }
             popup.translationX = 0f
             popup.translationY = 0f
-            Log.d(TAG, "menu at [$x,$y][${x + w},${y + h}] in ${dragLayer.width}x${dragLayer.height}, " +
-                "insets $insets, ${spec.kind}")
+            Log.d(TAG, "menu at [${x + o[0]},${y + o[1]}][${x + o[0] + w},${y + o[1] + h}] on screen, " +
+                "${w}x$h, in a ${layer.width}x${layer.height} window, ${spec.kind}")
+            return true
         }
 
         /** Opening: 0.94 → 1 about the anchor's corner and a fade, 150 ms emphasised decelerate. */

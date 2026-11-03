@@ -279,8 +279,7 @@ open class PopupContainer<T : ActivityContext>(
 
     private fun positionAndShow(@Px maxHeightPx: Int) {
         openBookShown?.let {
-            it.place(popupContainer, popupContainer.insets)
-            animateOpen()
+            it.show(popupContainer) { animateOpen() }
             return
         }
         orientAboutObject(maxHeightPx)
@@ -346,6 +345,7 @@ open class PopupContainer<T : ActivityContext>(
 
     @CallSuper
     override fun closeComplete() {
+        openBookShown?.detach()
         super.closeComplete()
         popupContainer.removeView(animationProxyView)
         mActivityContext?.dragController?.removeDragListener(this)

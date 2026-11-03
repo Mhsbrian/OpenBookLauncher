@@ -72,7 +72,7 @@ class PopupControllerForAppIcon<T> : PopupController<T> where T : Context, T : A
                 LauncherDeepShortcutDragHandler(activityContext as Launcher, container)
             container.configureForLauncher(activityContext, item)
             if (OpenBookMenu.isEnabled(activityContext)) { // OpenBook: at the pointer, OpenBook's menu
-                container.openBookMenu = OpenBookMenu.app(activityContext, icon)
+                container.openBookMenu = OpenBookMenu.app(icon)
             }
             if (Flags.expandableLongPressMenu()) {
                 val systemShortcutRedesign =

@@ -2422,7 +2422,7 @@ public class Launcher extends StatefulActivity<LauncherState>
                 openBook ? OpenBookMenu.desktopItems(WorkspaceLongPressOptions.getAll(this))
                         : WorkspaceLongPressOptions.getAll(this),
                 pos,
-                openBook ? OpenBookMenu.desktop(x, y) : null
+                openBook ? OpenBookMenu.desktop(this, x, y) : null
         );
     }
 

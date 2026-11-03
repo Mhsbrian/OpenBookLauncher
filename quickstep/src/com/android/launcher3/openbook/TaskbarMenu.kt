@@ -4,7 +4,8 @@
  */
 package com.android.launcher3.openbook
 
-import android.graphics.Rect
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.util.Log
 import android.view.View
 import com.android.launcher3.BubbleTextView
@@ -51,7 +52,7 @@ object TaskbarMenu {
         if (context is TaskbarOverlayContext) {
             return OpenBookMenu.Spec(
                 kind = OpenBookMenu.Kind.APP,
-                anchor = OpenBookMenu.anchorAtIcon(context, icon, byKeyboard),
+                anchor = OpenBookMenu.anchorAtIcon(icon, byKeyboard),
                 byKeyboard = byKeyboard,
                 byTouch = false,
                 arrange = { items ->
@@ -63,17 +64,8 @@ object TaskbarMenu {
         if (context !is TaskbarActivityContext) return null
         if (!OpenBookTaskbar.isEnabled(context)) return null
 
-        val dragLayer = context.dragLayer
-        val r = Rect()
-        dragLayer.getDescendantRectRelativeToSelf(icon, r)
-        val bar = taskbarViewOf(icon)
-        val barTop = if (bar != null) {
-            val b = Rect()
-            dragLayer.getDescendantRectRelativeToSelf(bar, b)
-            b.top
-        } else {
-            r.top
-        }
+        val r = OpenBookMenu.screenRect(icon)
+        val barTop = taskbarViewOf(icon)?.let { OpenBookMenu.screenRect(it).top } ?: r.top
 
         val pkg = item.targetPackage
         val tasks = if (pkg != null) {
@@ -97,7 +89,7 @@ object TaskbarMenu {
                 )
             }
         }
-        val header = OpenBookMenu.Header((item as? ItemInfoWithIcon)?.bitmap?.icon, appName)
+        val header = OpenBookMenu.Header(headerIcon(icon) ?: (item as? ItemInfoWithIcon)?.bitmap?.icon, appName)
         val windowCount = tasks.size
         return OpenBookMenu.Spec(
             kind = OpenBookMenu.Kind.TASKBAR,
@@ -136,6 +128,17 @@ object TaskbarMenu {
         val (close, rest) = shown.partition { it.labelResId == R.string.close_app_taskbar }
         val first = order.mapNotNull { id -> rest.firstOrNull { it.labelResId == id } }
         return listOf(first + rest.filter { it !in first }, close)
+    }
+
+    /** The icon as the taskbar draws it (its shape applied), at the header's 24 dp. */
+    private fun headerIcon(icon: BubbleTextView): Bitmap? {
+        val d = icon.icon?.constantState?.newDrawable(icon.resources)?.mutate() ?: return null
+        val size = icon.resources.getDimensionPixelSize(R.dimen.ob_mn_header_icon)
+        if (size <= 0) return null
+        val b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        d.setBounds(0, 0, size, size)
+        d.draw(Canvas(b))
+        return b
     }
 
     private fun taskbarViewOf(view: View): View? {

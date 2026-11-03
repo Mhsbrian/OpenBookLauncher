@@ -303,6 +303,15 @@ class AllAppsPanel private constructor(
         if (event.action != KeyEvent.ACTION_DOWN) return false
         escapeDown = true
         if (event.repeatCount > 0) return true
+        // A menu opened over the panel with the pointer leaves the keys with the panel: Esc closes the menu first.
+        val menu = ActivityContext.lookupContextNoThrow<TaskbarOverlayContext>(context)?.let {
+            AbstractFloatingView.getOpenView<AbstractFloatingView>(it, AbstractFloatingView.TYPE_ACTION_POPUP)
+        }
+        if (menu != null) {
+            menu.close(true)
+            Log.d(TAG, "Esc closed a menu over the panel")
+            return true
+        }
         val field = appsView.searchUiManager.editText
         if (field != null && !field.text.isNullOrEmpty()) {
             field.setText("")
