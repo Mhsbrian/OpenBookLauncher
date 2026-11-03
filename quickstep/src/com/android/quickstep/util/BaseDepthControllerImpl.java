@@ -212,6 +212,16 @@ public class BaseDepthControllerImpl<
 
     protected void onInvalidSurface() { }
 
+    /** The blur at full depth, in pixels (OpenBook: the launcher's Overview for desks uses its own, design §5.2). */
+    protected int getMaxBlurRadius() {
+        return mMaxBlurRadius;
+    }
+
+    /** The wallpaper zoom for {@code depth} (OpenBook: none in the launcher's Overview for desks, design §5.2). */
+    protected float getWallpaperZoom(float depth) {
+        return depth;
+    }
+
     protected void applyDepthAndBlur() {
         applyDepthAndBlur(null, /* applyImmediately */ false, /* skipSimilarBlur */ true);
     }
@@ -227,7 +237,7 @@ public class BaseDepthControllerImpl<
             boolean applyImmediately, boolean skipSimilarBlur) {
 
         IBinder windowToken = mContainer.getRootView().getWindowToken();
-        float wallpaperZoom = mDepth;
+        float wallpaperZoom = getWallpaperZoom(mDepth);
         if (Flags.enableExpressiveFolderExpansion()) {
             wallpaperZoom = Math.max(wallpaperZoom, mWallpaperZoomOnly.value);
         }
@@ -257,7 +267,7 @@ public class BaseDepthControllerImpl<
         SurfaceControl blurSurface = mBlurSurface != null ? mBlurSurface : mBaseSurface;
 
         int previousBlur = mCurrentBlur;
-        int newBlur = shouldBlur() ? (int) (blurAmount * mMaxBlurRadius) : 0;
+        int newBlur = shouldBlur() ? (int) (blurAmount * getMaxBlurRadius()) : 0;
         int delta = Math.abs(newBlur - previousBlur);
         if (skipSimilarBlur && delta < Utilities.dpToPx(1) && newBlur != 0 && previousBlur != 0
                 && blurAmount != 1f) {

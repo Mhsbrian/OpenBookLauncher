@@ -23,6 +23,7 @@ import android.util.FloatProperty
 import android.widget.Button
 import com.android.launcher3.Flags.enableFocusOutline
 import com.android.launcher3.R
+import com.android.launcher3.openbook.OverviewDesks
 import com.android.launcher3.util.KFloatProperty
 import com.android.launcher3.util.MultiPropertyDelegate
 import com.android.launcher3.util.MultiValueAlpha
@@ -43,6 +44,19 @@ constructor(
     private val clearAllButtonAlpha =
         object : MultiValueAlpha(this, Alpha.entries.size) {
             override fun apply(value: Float) {
+                // OpenBook: on a desk the glass chip shows instead, without the scroll alpha (design
+                // §5.2); this button stays in place for RecentsView's scrolling, invisible.
+                val chip = OverviewDesks.clearAllChip(this@ClearAllButton)
+                if (chip != null) {
+                    super.apply(0f)
+                    isClickable = false
+                    chip.setButtonAlpha(
+                        Alpha.entries
+                            .filter { it != Alpha.SCROLL }
+                            .fold(1f) { a, e -> a * get(e.ordinal).value }
+                    )
+                    return
+                }
                 super.apply(value)
                 isClickable = value >= 1f
             }
@@ -173,6 +187,20 @@ constructor(
         get() = parent as? RecentsView<*, *>?
 
     override fun hasOverlappingRendering() = false
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        // OpenBook: the glass chip (design §5.2); re-applying the alpha moves it to the chip.
+        if (OverviewDesks.attachClearAll(this) != null) {
+            val alpha = contentAlpha
+            contentAlpha = alpha
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        OverviewDesks.clearAllChip(this)?.detach()
+    }
 
     fun onRecentsViewScroll(scroll: Int, gridEnabled: Boolean) {
         val recentsView = recentsView ?: return

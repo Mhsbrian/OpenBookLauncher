@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright (C) 2026 The OpenBook Authors
+  SPDX-License-Identifier: Apache-2.0
+
+  OpenBook's Clear all chip in Overview (docs/launcher-design.md §5.2): three staggered bars, our own drawing.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M7,7h14v2H7zM5,11h14v2H5zM3,15h14v2H3z"
+        android:fillColor="@android:color/white"/>
+</vector>
