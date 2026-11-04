@@ -97,7 +97,6 @@
     <dimen name="ob_aa_rise">16dp</dimen>
     <item name="ob_aa_close_scale" format="float" type="dimen">0.98</item>
     <dimen name="ob_aa_fall">8dp</dimen>
-    <integer name="ob_aa_grid_delay_ms">40</integer>
 
     <!-- §6.3 Panel shadow: 0 24 48 and 0 2 6 (offset, blur), light and dark. -->
     <dimen name="ob_shadow_key_y">24dp</dimen>
