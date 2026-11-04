@@ -101,6 +101,12 @@ constructor(
         return getDisplayDeskConfig(displayId)?.activeDeskId ?: INACTIVE_DESK_ID
     }
 
+    /** The IDs of the desks on the display with the given [displayId], in the order they were made (OpenBook). */
+    fun getDeskIds(displayId: Int): List<Int> = getDisplayDeskConfig(displayId)?.deskIds?.sorted() ?: emptyList()
+
+    /** Whether Overview shows on the display with the given [displayId] (OpenBook). */
+    fun isInOverview(displayId: Int): Boolean = inOverviewStateMap[displayId]
+
     /** Returns whether a desk is currently active on the display with the given [displayId]. */
     @AnyThread
     fun isInDesktopMode(displayId: Int): Boolean {

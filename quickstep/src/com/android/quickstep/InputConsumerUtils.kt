@@ -43,6 +43,7 @@ import com.android.quickstep.inputconsumers.ScreenPinnedInputConsumer
 import com.android.quickstep.inputconsumers.SysUiOverlayInputConsumer
 import com.android.quickstep.inputconsumers.TaskbarUnstashInputConsumer
 import com.android.quickstep.inputconsumers.TrackpadStatusBarInputConsumer
+import com.android.launcher3.openbook.DeskSwipe
 import com.android.quickstep.util.ActiveGestureErrorDetector
 import com.android.quickstep.util.ActiveGestureLog
 import com.android.quickstep.util.ActiveGestureLog.CompoundString
@@ -427,6 +428,7 @@ object InputConsumerUtils {
                     )
             }
         }
+        base = DeskSwipe.replaceOrKeep(context, deviceState, gestureState, inputMonitorCompat, base, canStartSystemGesture) // OpenBook
         logInputConsumerSelectionReason(base, reasonString)
         return base
     }
