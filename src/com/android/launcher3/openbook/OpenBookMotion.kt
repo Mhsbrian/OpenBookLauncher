@@ -133,6 +133,9 @@ object OpenBookMotion {
     /** `spring.panel`: All Apps opening, Overview's tiles, a menu's scale. Settles in ≈ 280 ms, 0.3 % overshoot. */
     @JvmField val PANEL = Spring("spring.panel", 500f, 0.90f)
 
+    /** `spring.desk`: a desk sliding the display's width as desks switch (four-finger swipe). Settles in ≈ 380 ms. */
+    @JvmField val DESK = Spring("spring.desk", 300f, 0.95f)
+
     /** `spring.settle` (Quire's): a line of state's width, Overview's hover lift, reflow. Settles in ≈ 170 ms. */
     @JvmField val SETTLE = Spring("spring.settle", 700f, 0.90f)
 
