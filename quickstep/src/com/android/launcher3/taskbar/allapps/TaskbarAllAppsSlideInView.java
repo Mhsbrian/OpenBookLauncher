@@ -131,7 +131,7 @@ public class TaskbarAllAppsSlideInView extends AbstractSlideInView<TaskbarOverla
         mAllAppsCallbacks.onAllAppsTransitionStart(true);
 
         boolean isAnimatingToAllApps = mAllAppsCallbacks.isStateTransitionToAllAppsInProgress();
-        if (mPanel != null) mPanel.onOpen(animate || isAnimatingToAllApps); // OpenBook
+        if (mPanel != null) mPanel.onOpen(animate || isAnimatingToAllApps, !animate && isAnimatingToAllApps); // OpenBook
         if (animate || isAnimatingToAllApps) {
             // For any animation (potentially user-controlled), ensure the listeners are registered.
             setUpOpenAnimation(mAllAppsCallbacks.getOpenDuration());

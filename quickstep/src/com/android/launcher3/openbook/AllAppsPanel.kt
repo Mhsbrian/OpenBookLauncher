@@ -61,8 +61,10 @@ import kotlin.math.roundToInt
  *   a 2 dp `primary` ring and caret while it has focus. Focus starts in it, however the panel opens (the apps pill,
  *   Meta, typing on the desktop).
  * - **Motion.** Opening, the panel rises 16 dp and scales from 0.96 about its bottom centre on `spring.panel`, fading
- *   in on `duration.fade`; the grid fades in 40 ms later. Closing takes `duration.exit` (150 ms, emphasised
- *   accelerate) to 0.98, an 8 dp fall and no opacity. Remove animations makes both cuts.
+ *   in on `duration.fade` with its apps. Opened by the launcher's transition to All Apps (a two-finger swipe up on
+ *   the desktop, typing on the desktop), it makes the same motion on that transition's progress instead, so it
+ *   follows the fingers and settles with them. Closing takes `duration.exit` (150 ms, emphasised accelerate) to 0.98,
+ *   an 8 dp fall and no opacity. Remove animations makes both cuts.
  *
  * The grid's cells, the top hit and the no-results row are [AllAppsPanelCells]. It applies to the persistent taskbar
  * of a launcher whose resources say `bool/desktop_form_factor` (OpenBook's desktop overlay), on the primary display;
@@ -90,7 +92,6 @@ class AllAppsPanel private constructor(
     private val rise = res.getDimension(R.dimen.ob_aa_rise)
     private val closeScale = res.getFloat(R.dimen.ob_aa_close_scale)
     private val fall = res.getDimension(R.dimen.ob_aa_fall)
-    private val gridDelayMs = res.getInteger(R.integer.ob_aa_grid_delay_ms).toLong()
 
     /** Closing: `duration.exit` (150 ms, emphasised accelerate). */
     val closeDurationMs = OpenBookMotion.EXIT.ms.toInt()
@@ -103,8 +104,10 @@ class AllAppsPanel private constructor(
 
     private var openSpring: SpringAnimation? = null
     private var fade: ValueAnimator? = null
-    private var gridFade: ValueAnimator? = null
     private var closing = false
+    private var following = false // opening with the launcher's All Apps transition: a swipe, or typing
+    private var followFrames = FrameLog()
+    private var followStart = 0L
     private var escapeDown = false
     private var closeStart = 0L
     private var closeFrames = FrameLog()
@@ -122,6 +125,9 @@ class AllAppsPanel private constructor(
         sheet.clipChildren = false
         sheet.clipToPadding = false
         styleField()
+        // Invisible until the opening runs: the overlay window draws its first frame before onOpen (posted after
+        // attach), and a fully open panel in that frame read as a flash, then the panel opening again (ANAL-354).
+        apply(0f, openScale, rise)
         Log.d(TAG, "All Apps is the panel")
     }
 
@@ -208,9 +214,14 @@ class AllAppsPanel private constructor(
         return false
     }
 
-    /** The sheet is attached and opening: focus the field and run the panel's own opening. */
-    fun onOpen(animate: Boolean) {
+    /**
+     * The sheet is attached and opening: focus the field and run the panel's own opening, or, when the launcher's
+     * transition to All Apps opens it ([follow]: a two-finger swipe up on the desktop, typing on the desktop), let
+     * that transition's progress move it through [onShift], so it follows the fingers and settles with them.
+     */
+    fun onOpen(animate: Boolean, follow: Boolean = false) {
         closing = false
+        following = false
         layout()
         lockHeight()
         appsView.searchUiManager.editText?.let { if (!it.isFocused) it.requestFocusExplicitly() }
@@ -227,6 +238,14 @@ class AllAppsPanel private constructor(
         }
         apply(0f, openScale, rise)
         openSpring?.cancel()
+        if (follow) {
+            following = true
+            followFrames = FrameLog()
+            followStart = SystemClock.uptimeMillis()
+            grid.alpha = 0f
+            Log.d(TAG, "open: following the launcher's transition, ${panelHeight}px tall")
+            return
+        }
         val start = SystemClock.uptimeMillis()
         val frames = FrameLog()
         openSpring = SpringAnimation(FloatValueHolder(0f)).apply {
@@ -248,13 +267,9 @@ class AllAppsPanel private constructor(
             start()
         }
         fade?.cancel()
+        // The grid arrives with the glass: an empty pane first, then its apps, read as two openings (ANAL-354).
         fade = OpenBookMotion.FADE.animator(0f, 1f) { if (!closing) setAlpha(it) }.apply { start() }
-        grid.alpha = 0f
-        gridFade?.cancel()
-        gridFade = OpenBookMotion.FADE.animator(0f, 1f) { grid.alpha = it }.apply {
-            startDelay = gridDelayMs
-            start()
-        }
+        grid.alpha = 1f
     }
 
     /** Clips [v], which reaches the panel's bottom, to the panel's bottom corners (AOSP clips it to a rectangle). */
@@ -337,6 +352,7 @@ class AllAppsPanel private constructor(
         closeFrames = FrameLog()
         openSpring?.cancel()
         fade?.cancel()
+        following = false
         closeFrom = floatArrayOf(appsView.alpha, appsView.scaleX, appsView.translationY)
     }
 
@@ -345,6 +361,7 @@ class AllAppsPanel private constructor(
      * which runs [closeDurationMs] on [closeInterpolator].
      */
     fun onShift(shift: Float, toClosed: Boolean) {
+        if (!toClosed && following && !closing) return follow(1f - shift)
         if (!toClosed || !closing) return
         val (a, s, y) = closeFrom
         apply(a * (1f - shift), s + (closeScale - s) * shift, y + (fall - y) * shift)
@@ -354,6 +371,25 @@ class AllAppsPanel private constructor(
                 "(longest ${closeFrames.longest} ms; $closeDurationMs ms set), " +
                 "${SystemClock.uptimeMillis() - closeStart} ms in all")
             closeStart = 0L
+        }
+    }
+
+    /**
+     * Opening with the launcher's transition, at [p] (0 closed, 1 open): the same rise and scale as the panel's own
+     * opening, and the glass and its apps arriving together over the first 60 % of it.
+     */
+    private fun follow(p: Float) {
+        val q = p.coerceIn(0f, 1f)
+        apply((q / 0.6f).coerceAtMost(1f), openScale + (1f - openScale) * q, rise * (1f - q))
+        appsView.appsRecyclerViewContainer.alpha = 1f
+        followFrames.frame()
+        // Keep following until the transition ends or closes: the fingers can still be down at full progress and
+        // reverse. Only the log says when it first got there.
+        if (q >= 1f && followStart != 0L) {
+            Log.d(TAG, "open: followed the launcher's transition over ${followFrames.count} frames, " +
+                "${followFrames.span()} ms from its first (longest ${followFrames.longest} ms), " +
+                "${SystemClock.uptimeMillis() - followStart} ms in all")
+            followStart = 0L
         }
     }
 
